@@ -80,7 +80,7 @@ void ZepWidget_Qt::paintEvent(QPaintEvent* pPaint)
 void ZepWidget_Qt::keyPressEvent(QKeyEvent* ev)
 {
     uint32_t mod = 0;
-    auto pMode = m_spEditor->GetActiveTabWindow()->GetActiveWindow()->GetMode();
+    auto pMode = m_spEditor->GetActiveTabWindow()->GetActiveWindow()->GetBuffer().GetMode();
 
     if (ev->modifiers() & Qt::ShiftModifier)
     {

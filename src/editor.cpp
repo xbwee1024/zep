@@ -3,6 +3,7 @@
 #include "zep/display.h"
 #include "zep/mode_standard.h"
 #include "zep/mode_vim.h"
+#include "zep/mode_repl.h"
 #include "zep/syntax.h"
 #include "zep/syntax_providers.h"
 #include "zep/tab_window.h"
@@ -263,6 +264,20 @@ ZepBuffer* ZepEditor::GetFileBuffer(const ZepPath& filePath, uint32_t fileFlags,
 
     pBuffer->SetFlags(fileFlags, true);
     return pBuffer;
+}
+
+ZepWindow* ZepEditor::AddRepl(ZepRepl* pRepl)
+{
+    auto pReplBuffer = GetEmptyBuffer("Repl", FileFlags::Locked | FileFlags::ReadOnly);
+    pReplBuffer->SetBufferType(BufferType::Repl);
+
+    auto pReplWindow = GetActiveTabWindow()->AddWindow(pReplBuffer, nullptr, false);
+    pReplWindow->SetCursorType(CursorType::LineMarker);
+
+    auto pMode = std::make_shared<ZepMode_Repl>(*this, pRepl);
+    pReplBuffer->SetMode(pMode);
+    pMode->Begin();
+    return pReplWindow;
 }
 
 ZepTabWindow* ZepEditor::EnsureTab()

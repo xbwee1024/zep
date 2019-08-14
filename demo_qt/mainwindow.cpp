@@ -79,8 +79,9 @@ MainWindow::MainWindow()
 
             auto pCurrentWindow = pWidget->GetEditor().GetActiveTabWindow()->GetActiveWindow();
             assert(pCurrentWindow);
+            const auto& buffer = pCurrentWindow->GetBuffer();
 
-            bool enabledVim = strcmp(pCurrentWindow->GetMode()->Name(), Zep::ZepMode_Vim::StaticName()) == 0;
+            bool enabledVim = strcmp(buffer.GetMode()->Name(), Zep::ZepMode_Vim::StaticName()) == 0;
             pVim->setCheckable(true);
             pStandard->setCheckable(true);
             pVim->setChecked(enabledVim);

@@ -120,6 +120,11 @@ public:
     IZepComponent* pComponent = nullptr;
 };
 
+struct ZepRepl
+{
+    std::function<std::string(const std::string&)> fnParser;
+};
+
 struct IZepComponent
 {
     virtual void Notify(std::shared_ptr<ZepMessage> message) = 0;
@@ -239,6 +244,8 @@ public:
     ZepTabWindow* AddTabWindow();
     void RemoveTabWindow(ZepTabWindow* pTabWindow);
     const tTabWindows& GetTabWindows() const;
+
+    ZepWindow* AddRepl(ZepRepl* pRepl);
 
     void ResetCursorTimer();
     bool GetCursorBlinkState() const;

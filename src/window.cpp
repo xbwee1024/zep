@@ -112,8 +112,8 @@ void ZepWindow::UpdateAirline()
 
     if (IsActiveWindow())
     {
-        m_airline.leftBoxes.push_back(AirBox{GetMode()->Name(), FilterActiveColor(m_pBuffer->GetTheme().GetColor(ThemeColor::Mode))});
-        switch (GetMode()->GetEditorMode())
+        m_airline.leftBoxes.push_back(AirBox{GetBuffer().GetMode()->Name(), FilterActiveColor(m_pBuffer->GetTheme().GetColor(ThemeColor::Mode))});
+        switch (GetBuffer().GetMode()->GetEditorMode())
         {
                 /*case EditorMode::Hidden:
             m_airline.leftBoxes.push_back(AirBox{ "HIDDEN", m_pBuffer->GetTheme().GetColor(ThemeColor::HiddenText) });
@@ -587,7 +587,7 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
         {
             if (IsActiveWindow())
             {
-                if (GetMode()->GetEditorMode() == EditorMode::Visual)
+                if (GetBuffer().GetMode()->GetEditorMode() == EditorMode::Visual)
                 {
                     // Draw the visual selection marker
                     auto sel = m_pBuffer->GetSelection();
@@ -759,11 +759,6 @@ void ZepWindow::DisplayCursor()
             break;
         }
     }
-}
-
-ZepMode* ZepWindow::GetMode() const
-{
-    return GetEditor().GetCurrentMode();
 }
 
 ZepTabWindow& ZepWindow::GetTabWindow() const
@@ -955,7 +950,7 @@ void ZepWindow::Display()
 
     if (IsActiveWindow() && cursorCL.x != -1)
     {
-        if (GetMode()->GetEditorMode() != EditorMode::Visual)
+        if (GetBuffer().GetMode()->GetEditorMode() != EditorMode::Visual)
         {
             auto& cursorLine = GetCursorLineInfo(cursorCL.y);
 

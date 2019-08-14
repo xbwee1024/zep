@@ -84,7 +84,7 @@ struct ZepConsole : Zep::IZepComponent
 
         if (blend < 1.0f)
         {
-            zepEditor.GetActiveTabWindow()->GetActiveWindow()->GetMode()->Begin();
+            zepEditor.GetActiveTabWindow()->GetActiveWindow()->GetBuffer().GetMode()->Begin();
         }
 
         ImGui::End();

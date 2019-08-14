@@ -1121,5 +1121,19 @@ BufferLocation ZepBuffer::GetLastLocation() const
 {
     return m_lastLocation;
 }
+    
+ZepMode* ZepBuffer::GetMode() const
+{
+    if (m_spMode)
+    {
+        return m_spMode.get();
+    }
+    return GetEditor().GetCurrentMode();
+}
+
+void ZepBuffer::SetMode(std::shared_ptr<ZepMode> spMode)
+{
+    m_spMode = spMode;
+}
 
 } // namespace Zep

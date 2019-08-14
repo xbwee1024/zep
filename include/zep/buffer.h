@@ -12,6 +12,7 @@ namespace Zep
 
 class ZepSyntax;
 class ZepTheme;
+class ZepMode;
 enum class ThemeColor;
 
 enum class SearchDirection
@@ -49,7 +50,8 @@ enum : uint32_t
 enum class BufferType
 {
     Normal,
-    Search
+    Search,
+    Repl
 };
 
 enum class LineLocation
@@ -244,6 +246,9 @@ public:
     void SetLastLocation(BufferLocation loc);
     BufferLocation GetLastLocation() const;
 
+    ZepMode* GetMode() const;
+    void SetMode(std::shared_ptr<ZepMode> spMode);
+
 private:
     // Internal
     GapBuffer<utf8>::const_iterator SearchWord(uint32_t searchType, GapBuffer<utf8>::const_iterator itrBegin, GapBuffer<utf8>::const_iterator itrEnd, SearchDirection dir) const;
@@ -267,6 +272,7 @@ private:
     BufferRange m_selection;
     tRangeMarkers m_rangeMarkers;
     BufferLocation m_lastLocation{ 0 };
+    std::shared_ptr<ZepMode> m_spMode;
 };
 
 // Notification payload

@@ -497,6 +497,10 @@ bool ZepMode_Vim::HandleExCommand(const std::string& strCommand, const char key)
             }
             GetEditor().SetCurrentTabWindow(pTab);
         }
+        else if (strCommand.find(":repl") == 0)
+        {
+            GetEditor().AddRepl(nullptr);
+        }
         else if (strCommand.find(":vsplit") == 0)
         {
             auto pTab = GetEditor().GetActiveTabWindow();

@@ -117,7 +117,6 @@ public:
     void UpdateScrollers();
 
     ZepTabWindow& GetTabWindow() const;
-    ZepMode* GetMode() const;
 
     void SetDisplayRegion(const NRectf& region);
 

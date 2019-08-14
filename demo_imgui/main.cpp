@@ -367,14 +367,13 @@ int main(int argc, char** argv)
                 ImGui::EndMenu();
             }
 
-            auto pCurrentWindow = zep.GetEditor().GetActiveTabWindow()->GetActiveWindow();
-            assert(pCurrentWindow);
+            const auto& buffer = zep.GetEditor().GetActiveTabWindow()->GetActiveWindow()->GetBuffer();
 
             if (ImGui::BeginMenu("Settings"))
             {
                 if (ImGui::BeginMenu("Editor Mode"))
                 {
-                    bool enabledVim = strcmp(pCurrentWindow->GetMode()->Name(), Zep::ZepMode_Vim::StaticName()) == 0;
+                    bool enabledVim = strcmp(buffer.GetMode()->Name(), Zep::ZepMode_Vim::StaticName()) == 0;
                     bool enabledNormal = !enabledVim;
                     if (ImGui::MenuItem("Vim", "CTRL+2", &enabledVim))
                     {

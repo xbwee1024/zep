@@ -35,6 +35,11 @@ EditorMode ZepMode::GetEditorMode() const
     return m_currentMode;
 }
 
+void ZepMode::SetEditorMode(EditorMode mode)
+{
+    m_currentMode = mode;
+}
+
 void ZepMode::AddCommandText(std::string strText)
 {
     for (auto& ch : strText)
@@ -256,6 +261,11 @@ bool ZepMode::HandleGlobalCtrlCommand(const std::string& cmd, uint32_t modifiers
     else if (cmd == "p" || cmd == ",")
     {
         GetEditor().BeginSecondaryMode(std::make_shared<ZepMode_Search>(GetEditor()));
+        return true;
+    }
+    else if (cmd == "r")
+    {
+        GetEditor().AddRepl(nullptr);
         return true;
     }
     return false;

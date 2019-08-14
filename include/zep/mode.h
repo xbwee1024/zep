@@ -65,6 +65,7 @@ public:
     }
     virtual void AddCommand(std::shared_ptr<ZepCommand> spCmd);
     virtual EditorMode GetEditorMode() const;
+    virtual void SetEditorMode(EditorMode mode);
 
     // Called when we begin editing in this mode
     virtual void Begin() = 0;
