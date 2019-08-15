@@ -4,6 +4,7 @@
 #include "zep/mode_standard.h"
 #include "zep/mode_vim.h"
 #include "zep/mode_repl.h"
+#include "zep/mode_search.h"
 #include "zep/syntax.h"
 #include "zep/syntax_providers.h"
 #include "zep/tab_window.h"
@@ -74,9 +75,9 @@ ZepEditor::ZepEditor(ZepDisplay* pDisplay,const ZepPath& root, uint32_t flags, I
     m_spTheme = std::make_shared<ZepTheme>();
 
     assert(m_pDisplay != nullptr);
-    RegisterMode(std::make_shared<ZepMode_Vim>(*this));
-    RegisterMode(std::make_shared<ZepMode_Standard>(*this));
-    SetMode(ZepMode_Vim::StaticName());
+    RegisterGlobalMode(std::make_shared<ZepMode_Vim>(*this));
+    RegisterGlobalMode(std::make_shared<ZepMode_Standard>(*this));
+    SetGlobalMode(ZepMode_Vim::StaticName());
 
     timer_restart(m_cursorTimer);
     m_commandLines.push_back("");
@@ -97,8 +98,6 @@ ZepEditor::ZepEditor(ZepDisplay* pDisplay,const ZepPath& root, uint32_t flags, I
 
 ZepEditor::~ZepEditor()
 {
-    m_spSecondaryMode.reset();
-
     delete m_pDisplay;
     delete m_pFileSystem;
 }
@@ -266,19 +265,40 @@ ZepBuffer* ZepEditor::GetFileBuffer(const ZepPath& filePath, uint32_t fileFlags,
     return pBuffer;
 }
 
-ZepWindow* ZepEditor::AddRepl(ZepRepl* pRepl)
+// TODO: Cleaner handling of window/mode/modal stuff.
+ZepWindow* ZepEditor::AddRepl()
 {
-    auto pReplBuffer = GetEmptyBuffer("Repl", FileFlags::Locked | FileFlags::ReadOnly);
+    auto pActiveWindow = GetActiveTabWindow()->GetActiveWindow();
+
+    auto pReplBuffer = GetEmptyBuffer("Repl", FileFlags::Locked);
     pReplBuffer->SetBufferType(BufferType::Repl);
 
     auto pReplWindow = GetActiveTabWindow()->AddWindow(pReplBuffer, nullptr, false);
-    pReplWindow->SetCursorType(CursorType::LineMarker);
 
-    auto pMode = std::make_shared<ZepMode_Repl>(*this, pRepl);
+    auto pMode = std::make_shared<ZepMode_Repl>(*this, *pActiveWindow, *pReplWindow);
     pReplBuffer->SetMode(pMode);
     pMode->Begin();
     return pReplWindow;
 }
+
+ZepWindow* ZepEditor::AddSearch()
+{
+    auto pSearchBuffer = GetEmptyBuffer("Search", FileFlags::Locked | FileFlags::ReadOnly);
+    pSearchBuffer->SetBufferType(BufferType::Search);
+
+    auto pActiveWindow = GetActiveTabWindow()->GetActiveWindow();
+    auto searchPath = GetFileSystem().GetSearchRoot(pActiveWindow->GetBuffer().GetFilePath());
+
+    auto pSearchWindow = GetActiveTabWindow()->AddWindow(pSearchBuffer, nullptr, false);
+    pSearchWindow->SetWindowFlags(pSearchWindow->GetWindowFlags() & WindowFlags::Modal);
+    pSearchWindow->SetCursorType(CursorType::LineMarker);
+
+    auto pMode = std::make_shared<ZepMode_Search>(*this, *pActiveWindow, *pSearchWindow, searchPath);
+    pSearchBuffer->SetMode(pMode);
+    pMode->Begin();
+    return pSearchWindow;
+}
+
 
 ZepTabWindow* ZepEditor::EnsureTab()
 {
@@ -458,12 +478,12 @@ const ZepEditor::tTabWindows& ZepEditor::GetTabWindows() const
     return m_tabWindows;
 }
 
-void ZepEditor::RegisterMode(std::shared_ptr<ZepMode> spMode)
+void ZepEditor::RegisterGlobalMode(std::shared_ptr<ZepMode> spMode)
 {
     m_mapModes[spMode->Name()] = spMode;
 }
 
-void ZepEditor::SetMode(const std::string& mode)
+void ZepEditor::SetGlobalMode(const std::string& mode)
 {
     auto itrMode = m_mapModes.find(mode);
     if (itrMode != m_mapModes.end())
@@ -473,24 +493,7 @@ void ZepEditor::SetMode(const std::string& mode)
     }
 }
 
-void ZepEditor::BeginSecondaryMode(std::shared_ptr<ZepMode> spSecondaryMode)
-{
-    m_spSecondaryMode = spSecondaryMode;
-    spSecondaryMode->Begin();
-}
-
-void ZepEditor::EndSecondaryMode()
-{
-    m_spSecondaryMode.reset();
-    SetCommandText("");
-}
-
-ZepMode* ZepEditor::GetSecondaryMode() const
-{
-    return m_spSecondaryMode.get();
-}
-
-ZepMode* ZepEditor::GetCurrentMode()
+ZepMode* ZepEditor::GetGlobalMode()
 {
     // The 'Mode' is typically vim or normal and determines how editing is done in a panel
     if (!m_pCurrentMode && !m_mapModes.empty())
@@ -498,10 +501,6 @@ ZepMode* ZepEditor::GetCurrentMode()
         m_pCurrentMode = m_mapModes.begin()->second.get();
     }
 
-    if (m_spSecondaryMode)
-    {
-        return m_spSecondaryMode.get();
-    }
     return m_pCurrentMode;
 }
 

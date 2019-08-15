@@ -13,7 +13,7 @@ struct ZepRepl;
 class ZepMode_Repl : public ZepMode
 {
 public:
-    ZepMode_Repl(ZepEditor& editor, ZepRepl* pRepl);
+    ZepMode_Repl(ZepEditor& editor, ZepWindow& launchWindow, ZepWindow& replWindow);
     ~ZepMode_Repl();
 
     virtual void AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
@@ -30,8 +30,13 @@ public:
     }
 
 private:
+    void Close();
+
+private:
     void BeginInput();
     BufferLocation m_startLocation = BufferLocation{ 0 };
+    ZepWindow& m_launchWindow;
+    ZepWindow& m_replWindow;
     ZepRepl* m_pRepl = nullptr;
 };
 

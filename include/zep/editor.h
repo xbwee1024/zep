@@ -120,11 +120,6 @@ public:
     IZepComponent* pComponent = nullptr;
 };
 
-struct ZepRepl
-{
-    std::function<std::string(const std::string&)> fnParser;
-};
-
 struct IZepComponent
 {
     virtual void Notify(std::shared_ptr<ZepMessage> message) = 0;
@@ -194,11 +189,9 @@ public:
     ZepBuffer* InitWithFileOrDir(const std::string& str);
     ZepBuffer* InitWithText(const std::string& strName, const std::string& strText);
 
-    ZepMode* GetCurrentMode();
-    void RegisterMode(std::shared_ptr<ZepMode> spMode);
-    void SetMode(const std::string& mode);
-    void BeginSecondaryMode(std::shared_ptr<ZepMode> spSecondaryMode);
-    void EndSecondaryMode();
+    ZepMode* GetGlobalMode();
+    void RegisterGlobalMode(std::shared_ptr<ZepMode> spMode);
+    void SetGlobalMode(const std::string& mode);
     ZepMode* GetSecondaryMode() const;
 
     void Display();
@@ -245,7 +238,8 @@ public:
     void RemoveTabWindow(ZepTabWindow* pTabWindow);
     const tTabWindows& GetTabWindows() const;
 
-    ZepWindow* AddRepl(ZepRepl* pRepl);
+    ZepWindow* AddRepl();
+    ZepWindow* AddSearch();
 
     void ResetCursorTimer();
     bool GetCursorBlinkState() const;
@@ -333,7 +327,6 @@ private:
 
     // Active mode
     ZepMode* m_pCurrentMode = nullptr;
-    std::shared_ptr<ZepMode> m_spSecondaryMode;
 
     // Tab windows
     tTabWindows m_tabWindows;

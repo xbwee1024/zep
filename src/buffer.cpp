@@ -1128,7 +1128,7 @@ ZepMode* ZepBuffer::GetMode() const
     {
         return m_spMode.get();
     }
-    return GetEditor().GetCurrentMode();
+    return GetEditor().GetGlobalMode();
 }
 
 void ZepBuffer::SetMode(std::shared_ptr<ZepMode> spMode)

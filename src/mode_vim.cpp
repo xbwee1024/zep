@@ -326,7 +326,7 @@ void ZepMode_Vim::SwitchMode(EditorMode mode)
     if (mode == EditorMode::None)
         return;
 
-    if (mode == EditorMode::Insert && GetCurrentWindow() && GetCurrentWindow()->GetBuffer().TestFlags(FileFlags::Locked))
+    if (mode == EditorMode::Insert && GetCurrentWindow() && GetCurrentWindow()->GetBuffer().TestFlags(FileFlags::ReadOnly))
     {
         mode = EditorMode::Normal;
     }
@@ -499,7 +499,7 @@ bool ZepMode_Vim::HandleExCommand(const std::string& strCommand, const char key)
         }
         else if (strCommand.find(":repl") == 0)
         {
-            GetEditor().AddRepl(nullptr);
+            GetEditor().AddRepl();
         }
         else if (strCommand.find(":vsplit") == 0)
         {

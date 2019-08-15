@@ -125,6 +125,11 @@ struct RangeMarker
     }
 };
 
+struct ZepRepl
+{
+    std::function<std::string(const std::string&)> fnParser;
+};
+
 using tRangeMarkers = std::vector<std::shared_ptr<RangeMarker>>;
 
 const long InvalidOffset = -1;
@@ -249,6 +254,9 @@ public:
     ZepMode* GetMode() const;
     void SetMode(std::shared_ptr<ZepMode> spMode);
 
+    void SetReplProvider(ZepRepl* repl) { m_replProvider = repl; }
+    ZepRepl* GetReplProvider() const { return m_replProvider; }
+
 private:
     // Internal
     GapBuffer<utf8>::const_iterator SearchWord(uint32_t searchType, GapBuffer<utf8>::const_iterator itrBegin, GapBuffer<utf8>::const_iterator itrEnd, SearchDirection dir) const;
@@ -273,6 +281,7 @@ private:
     tRangeMarkers m_rangeMarkers;
     BufferLocation m_lastLocation{ 0 };
     std::shared_ptr<ZepMode> m_spMode;
+    ZepRepl* m_replProvider = nullptr; // May not be set
 };
 
 // Notification payload

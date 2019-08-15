@@ -91,13 +91,13 @@ void ZepWidget_Qt::keyPressEvent(QKeyEvent* ev)
         mod |= ModifierKey::Ctrl;
         if (ev->key() == Qt::Key_1)
         {
-            m_spEditor->SetMode(ZepMode_Standard::StaticName());
+            m_spEditor->SetGlobalMode(ZepMode_Standard::StaticName());
             update();
             return;
         }
         else if (ev->key() == Qt::Key_2)
         {
-            m_spEditor->SetMode(ZepMode_Vim::StaticName());
+            m_spEditor->SetGlobalMode(ZepMode_Vim::StaticName());
             update();
             return;
         }

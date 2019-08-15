@@ -139,12 +139,12 @@ void ZepEditor_ImGui::HandleInput()
 #if defined(_SDL_H) || defined(ZEP_USE_SDL)
         if (ImGui::IsKeyPressed(KEY_1))
         {
-            SetMode(ZepMode_Standard::StaticName());
+            SetGlobalMode(ZepMode_Standard::StaticName());
             handled = true;
         }
         else if (ImGui::IsKeyPressed(KEY_2))
         {
-            SetMode(ZepMode_Vim::StaticName());
+            SetGlobalMode(ZepMode_Vim::StaticName());
             handled = true;
         }
         else

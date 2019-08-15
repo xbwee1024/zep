@@ -46,6 +46,9 @@
 #include "FileWatcher/watcher.h"
 #endif
 
+#include "mal/mal.h"
+#include "mal/environment.h"
+
 using namespace Zep;
 
 //#include "src/tests/longtext.tt"
@@ -129,7 +132,7 @@ bool ReadCommandLine(int argc, char** argv, int& exitCode)
 }
 
 // A helper struct to init the editor and handle callbacks
-struct ZepContainer : public IZepComponent
+struct ZepContainer : public IZepComponent, public ZepRepl
 {
     ZepContainer(const std::string& startupFilePath)
         : spEditor(std::make_unique<ZepEditor_ImGui>(ZEP_ROOT))
@@ -145,6 +148,13 @@ struct ZepContainer : public IZepComponent
         },
                                              false);
 #endif
+
+        // Demo of how to implement a repl
+        spEnv = malInit();
+        fnParser = [&](const std::string& str) -> std::string
+        {
+            return malRepl(str, spEnv);
+        };
 
         spEditor->RegisterCallback(this);
 		spEditor->SetPixelScale(GetDisplayScale());
@@ -172,6 +182,15 @@ struct ZepContainer : public IZepComponent
 #ifndef __APPLE__
             MUtils::Watcher::Instance().Update();
 #endif
+        }
+        else if (message->messageId == Msg::HandleCommand)
+        {
+            if (message->str == ":repl")
+            {
+                GetEditor().GetActiveTabWindow()->GetActiveWindow()->GetBuffer().SetReplProvider(this);
+                GetEditor().AddRepl();
+                message->handled = true;
+            }
         }
         else if (message->messageId == Msg::Quit)
         {
@@ -215,6 +234,7 @@ struct ZepContainer : public IZepComponent
 
     bool quit = false;
     std::unique_ptr<ZepEditor_ImGui> spEditor;
+    malEnvPtr spEnv;
 };
 
 int main(int argc, char** argv)
@@ -377,11 +397,11 @@ int main(int argc, char** argv)
                     bool enabledNormal = !enabledVim;
                     if (ImGui::MenuItem("Vim", "CTRL+2", &enabledVim))
                     {
-                        zep.GetEditor().SetMode(Zep::ZepMode_Vim::StaticName());
+                        zep.GetEditor().SetGlobalMode(Zep::ZepMode_Vim::StaticName());
                     }
                     else if (ImGui::MenuItem("Standard", "CTRL+1", &enabledNormal))
                     {
-                        zep.GetEditor().SetMode(Zep::ZepMode_Standard::StaticName());
+                        zep.GetEditor().SetGlobalMode(Zep::ZepMode_Standard::StaticName());
                     }
                     ImGui::EndMenu();
                 }
