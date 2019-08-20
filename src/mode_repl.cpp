@@ -10,6 +10,9 @@
 namespace Zep
 {
 
+const std::string PromptString = ">> ";
+const std::string ContinuationString = ".. ";
+
 ZepMode_Repl::ZepMode_Repl(ZepEditor& editor, ZepWindow& launchWindow, ZepWindow& replWindow)
     : ZepMode(editor),
     m_launchWindow(launchWindow),
@@ -69,12 +72,65 @@ void ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t modifiers)
     {
         auto& buffer = m_replWindow.GetBuffer();
         std::string str = std::string(buffer.GetText().begin() + m_startLocation, buffer.GetText().end());
-
         buffer.Insert(buffer.EndLocation(), "\n");
+
+        auto stripLineStarts = [](std::string& str)
+        {
+            bool newline = true;
+            int pos = 0;
+            while (pos < str.size())
+            {
+                if (str[pos] == '\n')
+                    newline = true;
+                else if (newline)
+                {
+                    if (str.find(PromptString, pos) == pos)
+                    {
+                        str.erase(pos, PromptString.length());
+                        continue;
+                    }
+                    else if (str.find(ContinuationString, pos) == pos)
+                    {
+                        str.erase(pos, ContinuationString.length());
+                        continue;
+                    }
+                    newline = false;
+                }
+                pos++;
+            }
+        };
+        stripLineStarts(str);
 
         std::string ret;
         if (m_pRepl)
         {
+            int indent = 0;
+            bool complete = m_pRepl->IsFormComplete(str, indent);
+            if (!complete)
+            {
+                // If the indent is < 0, we completed too much of the expression, so don't let the user hit return until they 
+                // fix it.  Example in lisp: (+ 2 2))  This expression has 'too many' close brackets.
+                if (indent < 0)
+                {
+                    buffer.Delete(buffer.EndLocation() - 1, buffer.EndLocation());
+                    m_replWindow.SetBufferCursor(MaxCursorMove);
+                    return;
+                }
+                   
+                // New line continuation symbol
+                buffer.Insert(buffer.EndLocation(), ContinuationString);
+
+                // Indent by how far the repl suggests
+                if (indent > 0)
+                {
+                    for (int i = 0; i < indent; i++)
+                    {
+                        buffer.Insert(buffer.EndLocation(), " ");
+                    }
+                }
+                m_replWindow.SetBufferCursor(MaxCursorMove);
+                return;
+            }
             ret = m_pRepl->fnParser(str);
         }
         else
@@ -115,7 +171,7 @@ void ZepMode_Repl::BeginInput()
 {
     // Input arrows
     auto& buffer = m_replWindow.GetBuffer();
-    buffer.Insert(buffer.EndLocation(), ">> ");
+    buffer.Insert(buffer.EndLocation(), PromptString);
 
     m_replWindow.SetBufferCursor(MaxCursorMove);
     m_startLocation = m_replWindow.GetBufferCursor();

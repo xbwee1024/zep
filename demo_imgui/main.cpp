@@ -88,9 +88,9 @@ float GetDisplayScale()
     auto res = SDL_GetDisplayDPI(0, &ddpi, &hdpi, &vdpi);
     if (res == 0 && hdpi != 0)
     {
-		return hdpi / 96.0f;
+        return hdpi / 96.0f;
     }
-	return 1.0f;
+    return 1.0f;
 }
 
 } // namespace
@@ -157,7 +157,7 @@ struct ZepContainer : public IZepComponent, public ZepRepl
         };
 
         spEditor->RegisterCallback(this);
-		spEditor->SetPixelScale(GetDisplayScale());
+        spEditor->SetPixelScale(GetDisplayScale());
 
         if (!startupFilePath.empty())
         {
@@ -172,6 +172,44 @@ struct ZepContainer : public IZepComponent, public ZepRepl
     ZepContainer()
     {
         spEditor->UnRegisterCallback(this);
+    }
+
+    virtual bool IsFormComplete(const std::string& str, int& indent) override
+    {
+        int count = 0;
+        for (auto& ch : str)
+        {
+            if (ch == '(')
+                count++;
+            if (ch == ')')
+                count--;
+        }
+
+        if (count < 0)
+        {
+            indent = -1;
+            return false;
+        }
+        else if (count == 0)
+        { 
+            return true;
+        }
+
+        int count2 = 0;
+        indent = 1;
+        for (auto& ch : str)
+        {
+            if (ch == '(')
+                count2++;
+            if (ch == ')')
+                count2--;
+            if (count2 == count)
+            {
+                break;
+            }
+            indent++;
+        }
+        return false;
     }
 
     // Inherited via IZepComponent
@@ -339,14 +377,14 @@ int main(int argc, char** argv)
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
 
-			// Keep consuming events if they are stacked up
-			// Bug #39.
-			// This stops keyboard events filling up the queue and replaying after you release the key.
-			// It also makes things more snappy
-			if (SDL_PollEvent(nullptr) == 1)
-			{
-				continue;
-			}
+            // Keep consuming events if they are stacked up
+            // Bug #39.
+            // This stops keyboard events filling up the queue and replaying after you release the key.
+            // It also makes things more snappy
+            if (SDL_PollEvent(nullptr) == 1)
+            {
+                continue;
+            }
         }
         else
         {
