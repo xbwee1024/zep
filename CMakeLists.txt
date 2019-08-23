@@ -11,7 +11,7 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-PROJECT (ZepDemo)
+PROJECT (Zep)
 
 IF (ZEP_FEATURE_CPP_FILE_SYSTEM)
 ADD_DEFINITIONS(-DZEP_FEATURE_CPP_FILE_SYSTEM)
@@ -43,6 +43,9 @@ SET_PROPERTY(GLOBAL PROPERTY AUTOMOC_FOLDER Automoc)
 SET_PROPERTY(GLOBAL PROPERTY AUTOGEN_TARGETS_FOLDER Automoc)
 endif()
 
+INCLUDE(GNUInstallDirs)
+INCLUDE(CMakePackageConfigHelpers)
+
 # Third party sources
 SET(M3RDPARTY_INCLUDE "")
 
@@ -63,28 +66,48 @@ INCLUDE(src/list.cmake)
 
 # Create the library - No depenencies on anything else in this file
 ADD_LIBRARY(Zep STATIC ${ZEP_SOURCE} ${ZEP_INCLUDE})
+ADD_LIBRARY(Zep::Zep ALIAS Zep)
 TARGET_INCLUDE_DIRECTORIES(Zep 
 PRIVATE
     src/mcommon
     src
     ${SRC_INCLUDE}
     ${CMAKE_BINARY_DIR}
-PUBLIC
     include
+PUBLIC
+    $<INSTALL_INTERFACE:include>
     ) 
+
+SET_TARGET_PROPERTIES(Zep PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
 
 # Create the ImGUI zep library to help with building imgui apps 
 IF (BUILD_IMGUI)
 ADD_LIBRARY(ZepImGui STATIC ${ZEP_SOURCE_IMGUI})
+ADD_LIBRARY(Zep::ZepImGui ALIAS ZepImGui)
 TARGET_INCLUDE_DIRECTORIES(ZepImGui 
     PRIVATE 
         ${ZEP_INCLUDE_IMGUI}
         ${M3RDPARTY_DIR}/imgui
-    PUBLIC include)
+        include
+    PUBLIC 
+        $<INSTALL_INTERFACE:include>
+    )
+
+SET_TARGET_PROPERTIES(ZepImGui PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
 
 IF (BUILD_IMGUI_APP OR BUILD_QT)
 INCLUDE(${M3RDPARTY_DIR}/mal/list.cmake)
 ENDIF()
+
+SET(DEMO_NAME ${PROJECT_NAME}Demo)
 
 # Build the zep demo
 IF (BUILD_IMGUI_APP)
@@ -92,15 +115,16 @@ IF(WIN32)
 # Let windows know that the app is DPI Aware
 SET(MANIFEST_SOURCE dpiawarescaling.manifest)
 ENDIF()
-ADD_EXECUTABLE (${PROJECT_NAME} WIN32 
+ADD_EXECUTABLE (${DEMO_NAME} WIN32 
     demo_imgui/main.cpp
     ${MANIFEST_SOURCE}
 	${IMGUI_SOURCE}
     ${M3RDPARTY_DIR}/tfd/tinyfiledialogs.c
     ) # Win32 ignored on non-windows
 
-TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} 
+TARGET_INCLUDE_DIRECTORIES(${DEMO_NAME}
     PRIVATE
+        include
         ${CMAKE_BINARY_DIR}
         ${M3RDPARTY_DIR}
         ${M3RDPARTY_DIR}/sdl/include
@@ -108,21 +132,29 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME}
         ${M3RDPARTY_DIR}/imgui
         ${M3RDPARTY_DIR}/tfd
         ${M3RDPARTY_DIR}/imgui/examples/libs/gl3w)
-copy_existing_files(${PROJECT_NAME} m3rdparty/imgui/misc/fonts/ProggyClean.ttf ${CMAKE_CURRENT_BINARY_DIR}/$(Configuration) )
-TARGET_LINK_LIBRARIES (${PROJECT_NAME} 
+copy_existing_files(${DEMO_NAME} m3rdparty/imgui/misc/fonts/ProggyClean.ttf ${CMAKE_CURRENT_BINARY_DIR}/$(Configuration) )
+
+SET_TARGET_PROPERTIES(${DEMO_NAME} PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+TARGET_LINK_LIBRARIES (${DEMO_NAME} 
 PRIVATE
     ZepImGui
     Zep
     Mal
     ${PLATFORM_LINKLIBS}
     ${SDL_LINKLIBS})
-ADD_DEPENDENCIES(${PROJECT_NAME} sdl2 ZepImGui Zep)
+ADD_DEPENDENCIES(${DEMO_NAME} sdl2 ZepImGui Zep)
 ENDIF()
 ENDIF() # IMGUI
 
 # Create the Qt version of the app
 IF (BUILD_QT)
 ADD_LIBRARY(ZepQt STATIC ${ZEP_SOURCE_QT})
+ADD_LIBRARY(Zep::ZepQt ALIAS ZepQt)
 SET(CMAKE_AUTOMOC ON)
 SET(RESOURCE_FOLDER "" )
 SET(RESOURCE_FILES "")
@@ -132,23 +164,32 @@ TARGET_INCLUDE_DIRECTORIES(ZepQt
 PRIVATE
     ${ZEP_INCLUDE_QT}
     ${M3RDPARTY_DIR}
+    include
 PUBLIC
-    include)
+    $<INSTALL_INTERFACE:include>
+)
 
-ADD_EXECUTABLE (${PROJECT_NAME}-qt WIN32 ${DEMO_SOURCE_QT} ${RESOURCE_FILES}) # Win32 ignored on non-windows
-TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME}-qt
+SET_TARGET_PROPERTIES(ZepQt PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+ADD_EXECUTABLE (${DEMO_NAME}-qt WIN32 ${DEMO_SOURCE_QT} ${RESOURCE_FILES}) # Win32 ignored on non-windows
+TARGET_INCLUDE_DIRECTORIES(${DEMO_NAME}-qt
 PRIVATE
     ${ZEP_INCLUDE_QT}
-    ${CMAKE_BINARY_DIR})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME}-qt PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets ZepQt Zep Mal ${PLATFORM_LINKLIBS})
-TARGET_COMPILE_OPTIONS(${PROJECT_NAME}-qt PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/W3>) # Workaround Qt + MSVC 19 compile issue in release build.
-ADD_DEPENDENCIES(${PROJECT_NAME} sdl2 ZepQt)
+    ${CMAKE_BINARY_DIR}
+    include
+    )
+TARGET_LINK_LIBRARIES(${DEMO_NAME}-qt PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets ZepQt Zep Mal ${PLATFORM_LINKLIBS})
+TARGET_COMPILE_OPTIONS(${DEMO_NAME}-qt PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/W3>) # Workaround Qt + MSVC 19 compile issue in release build.
+ADD_DEPENDENCIES(${DEMO_NAME} sdl2 ZepQt)
 if(WIN32)
 MESSAGE(STATUS "Copying required Qt libraries and binaries to output directory....")
 # Run winddeployqt if it can be found, to ensure installed dependencies
 find_program(WINDEPLOYQT_EXECUTABLE NAMES windeployqt HINTS ${QTDIR} ENV QTDIR PATH_SUFFIXES bin)
-add_custom_command(TARGET ${PROJECT_NAME}-qt POST_BUILD
-COMMAND ${WINDEPLOYQT_EXECUTABLE} $<TARGET_FILE:${PROJECT_NAME}-qt>)
+add_custom_command(TARGET ${DEMO_NAME}-qt POST_BUILD
+COMMAND ${WINDEPLOYQT_EXECUTABLE} $<TARGET_FILE:${DEMO_NAME}-qt>)
 ENDIF() # Win32
 ENDIF() # Build QT
 
@@ -158,7 +199,7 @@ ENDIF() # Build QT
 IF (BUILD_IMGUI_APP)
 SET(CMAKE_AUTOMOC OFF)
 INCLUDE(tests/list.cmake)
-enable_testing()
+ENABLE_TESTING()
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGTEST_HAS_TR1_TUPLE=0")
 SET (TEST_SOURCES
     ${M3RDPARTY_DIR}/googletest/googletest/src/gtest-all.cc
@@ -167,16 +208,59 @@ SET (TEST_SOURCES
 ADD_EXECUTABLE (unittests ${TEST_SOURCES} )
 ADD_DEPENDENCIES(unittests sdl2 ZepImGui Zep)
 TARGET_LINK_LIBRARIES (unittests PRIVATE ZepImGui Zep ${PLATFORM_LINKLIBS} ${CMAKE_THREAD_LIBS_INIT})
-add_test(unittests unittests)
+ADD_TEST(unittests unittests)
 TARGET_INCLUDE_DIRECTORIES(unittests PRIVATE
     ${M3RDPARTY_DIR}/googletest/googletest/include
     ${M3RDPARTY_DIR}/googletest/googletest
     ${M3RDPARTY_DIR}/googletest/googlemock/include
     ${M3RDPARTY_DIR}/googletest/googlemock
     ${CMAKE_BINARY_DIR}
+    include
 )
+SET_TARGET_PROPERTIES(unittests PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
 ENDIF()
 
+INSTALL(TARGETS ${PROJECT_NAME} ZepImGui ZepQt ${DEMO_NAME} ${DEMO_NAME}-qt
+    EXPORT zep-targets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${LIBLEGACY_INCLUDE_DIRS}
+)
+
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/include/zep
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+INSTALL(EXPORT zep-targets
+    FILE zep-targets.cmake
+    NAMESPACE Zep::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zep
+)
+
+configure_package_config_file(
+    ${CMAKE_SOURCE_DIR}/cmake/zep-config.cmake.in
+    ${CMAKE_BINARY_DIR}/cmake/zep-config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zep
+)
+
+write_basic_package_version_file(
+    ${CMAKE_BINARY_DIR}/cmake/zep-config-version.cmake
+    VERSION 1.0
+    COMPATIBILITY AnyNewerVersion
+)
+
+install(
+    FILES
+        ${CMAKE_BINARY_DIR}/cmake/zep-config.cmake
+        ${CMAKE_BINARY_DIR}/cmake/zep-config-version.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zep
+)
 SOURCE_GROUP (Zep\\common REGULAR_EXPRESSION "src/mcommon/.*")
 SOURCE_GROUP (Zep\\common REGULAR_EXPRESSION "include/zep/mcommon/.*")
 SOURCE_GROUP (Zep REGULAR_EXPRESSION "src/.*")
