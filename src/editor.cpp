@@ -270,7 +270,7 @@ ZepWindow* ZepEditor::AddRepl()
 {
     auto pActiveWindow = GetActiveTabWindow()->GetActiveWindow();
 
-    auto pReplBuffer = GetEmptyBuffer("Repl", FileFlags::Locked);
+    auto pReplBuffer = GetEmptyBuffer("Repl.lisp", FileFlags::Locked);
     pReplBuffer->SetBufferType(BufferType::Repl);
 
     auto pReplWindow = GetActiveTabWindow()->AddWindow(pReplBuffer, nullptr, false);
