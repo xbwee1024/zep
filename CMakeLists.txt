@@ -3,26 +3,26 @@ cmake_minimum_required(VERSION 3.2)
 message(STATUS " CMakeLists: Zep")
 
 # Global Options
-option (BUILD_QT "Make Qt Library" OFF)
-option (BUILD_IMGUI "Make Imgui Library" ON)
-option (BUILD_DEMOS "Make the demo app" ON)
-option (BUILD_TESTS "Make the tests" ON)
-option (ZEP_FEATURE_CPP_FILE_SYSTEM "Default File system enabled" ON)
+option(BUILD_QT "Make Qt Library" OFF)
+option(BUILD_IMGUI "Make Imgui Library" ON)
+option(BUILD_DEMOS "Make the demo app" ON)
+option(BUILD_TESTS "Make the tests" ON)
+option(ZEP_FEATURE_CPP_FILE_SYSTEM "Default File system enabled" ON)
 
 # Global Settings
-set (CMAKE_CXX_STANDARD 14)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if (CMAKE_BUILD_TYPE MATCHES Coverage)
-    set (CMAKE_BUILD_TYPE "Debug")
-    set (PROJECT_COVERAGE ON)
+    set(CMAKE_BUILD_TYPE "Debug")
+    set(PROJECT_COVERAGE ON)
 endif()
 
 set(CMAKE_DEBUG_POSTFIX "-debug")
 
-project (Zep
+project(Zep
     LANGUAGES CXX C
     VERSION 0.5.0
 )
@@ -43,7 +43,7 @@ add_definitions(-DZEP_USE_SDL)
 set (ZEP_ROOT ${CMAKE_CURRENT_LIST_DIR})
 set (M3RDPARTY_DIR ${CMAKE_CURRENT_LIST_DIR}/m3rdparty)
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake/config_app.h.cmake ${CMAKE_BINARY_DIR}/config_app.h)
+configure_file(${ZEP_ROOT}/cmake/config_app.h.cmake ${CMAKE_BINARY_DIR}/config_app.h)
 
 # Set all compiler flags 
 include(cmake/all.cmake)
