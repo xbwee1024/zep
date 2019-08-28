@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source ./prebuild.sh
+
 case "${TRAVIS_OS_NAME}-${CC}" in
   linux-clang)
     ;;

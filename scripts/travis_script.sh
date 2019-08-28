@@ -1,6 +1,5 @@
 #!/bin/sh
 
-source ./prebuild.sh
 if test "${BUILD_TYPE}" = "Coverity"; then
   mkdir build
   cd build
