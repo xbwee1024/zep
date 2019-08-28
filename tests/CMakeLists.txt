@@ -1,6 +1,6 @@
-# Tests cannot be build without the ImGui and Qt parts - check this
+# Tests cannot be build without the ImGui parts
 
-if (BUILD_TESTS AND BUILD_IMGUI AND BUILD_QT)
+if (BUILD_TESTS AND BUILD_IMGUI)
 
 # Evil glob
 file(GLOB_RECURSE FOUND_TEST_SOURCES "*.test.cpp")
