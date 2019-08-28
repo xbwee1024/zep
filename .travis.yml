@@ -11,7 +11,6 @@ linux-gcc: &linux-gcc
       packages:
         - g++-7
         - cmake
-        - sdl2
         
 linux-clang: &linux-clang
   os: linux
@@ -25,7 +24,6 @@ linux-clang: &linux-clang
         - clang-6.0
         - cmake
         - g++-7
-        - sdl2
         
 osx-gcc: &osx-gcc
   os: osx

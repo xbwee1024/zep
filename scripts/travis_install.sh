@@ -16,12 +16,10 @@ case "${TRAVIS_OS_NAME}-${CC}" in
   osx-clang)
     brew update
     brew install cmake || true
-    brew install sdl2 || true
     ;;
 
   osx-gcc)
     brew update
     brew install cmake gcc || true
-    brew install sdl2 || true
     ;;
 esac
