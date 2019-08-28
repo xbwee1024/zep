@@ -3,7 +3,7 @@ IF (BUILD_DEMOS AND BUILD_IMGUI)
 
 set(DEMO_NAME ZepDemo)
 
-find_package(SDL2 REQUIRED)
+find_package(SDL2 REQUIRED NO_DEFAULT_PATH PATHS ${M3RDPARTY_DIR}/packages/build/sdl2-package)
 
 IF(WIN32)
 # Let windows know that the app is DPI Aware

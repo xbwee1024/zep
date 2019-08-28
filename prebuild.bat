@@ -1,2 +1,2 @@
-cd m3rdparty/sdl2
+cd m3rdparty/packages
 call install.bat
