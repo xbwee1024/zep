@@ -1,10 +1,10 @@
 #ifndef INCLUDE_MAL_H
 #define INCLUDE_MAL_H
 
-#include "Debug.h"
-#include "RefCountedPtr.h"
-#include "String.h"
-#include "Validation.h"
+#include "debug.h"
+#include "refcountedptr.h"
+#include "string.h"
+#include "validation.h"
 
 #include <vector>
 

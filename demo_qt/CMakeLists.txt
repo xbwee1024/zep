@@ -26,7 +26,7 @@ set(DEMO_SOURCE_QT
 
 # Create the Qt version of the app
 add_executable (${DEMO_NAME} WIN32 ${DEMO_SOURCE_QT} ${RESOURCE_FILES}) # Win32 ignored on non-windows
-
+set_property(TARGET ${DEMO_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON) # Qt requires this?
 target_include_directories(${DEMO_NAME}
     PRIVATE
         ${ZEP_ROOT}/demo_qt

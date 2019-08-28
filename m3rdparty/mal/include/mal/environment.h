@@ -1,7 +1,7 @@
 #ifndef INCLUDE_ENVIRONMENT_H
 #define INCLUDE_ENVIRONMENT_H
 
-#include "MAL.h"
+#include "mal.h"
 
 #include <map>
 

@@ -1,7 +1,7 @@
 #include "mal/mal.h"
-#include "mal/Environment.h"
-#include "mal/StaticList.h"
-#include "mal/Types.h"
+#include "mal/environment.h"
+#include "mal/staticlist.h"
+#include "mal/types.h"
 
 #include <chrono>
 #include <fstream>

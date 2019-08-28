@@ -1,7 +1,7 @@
 #ifndef INCLUDE_TYPES_H
 #define INCLUDE_TYPES_H
 
-#include "MAL.h"
+#include "mal.h"
 
 #include <exception>
 #include <map>

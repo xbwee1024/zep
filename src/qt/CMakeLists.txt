@@ -24,6 +24,8 @@ set(ZEP_INCLUDE_QT ${ZEP_ROOT}/src/qt)
 add_library(ZepQt STATIC ${ZEP_SOURCE_QT})
 add_library(Zep::ZepQt ALIAS ZepQt)
 
+set_property(TARGET ZepQt PROPERTY POSITION_INDEPENDENT_CODE ON) # Qt requires this
+
 target_include_directories(ZepQt
     PRIVATE
         ${ZEP_INCLUDE_QT}
