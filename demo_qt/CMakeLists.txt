@@ -5,6 +5,10 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_PREFIX_PATH $ENV{QT_INSTALL_LOCATION})
 
+find_package(Qt5 COMPONENTS Core Widgets Gui REQUIRED)
+set_property(GLOBAL PROPERTY AUTOMOC_FOLDER Automoc)
+set_property(GLOBAL PROPERTY AUTOGEN_TARGETS_FOLDER Automoc)
+
 set(DEMO_NAME ZepDemo-qt)
 
 set(RESOURCE_FOLDER 
@@ -37,9 +41,9 @@ target_include_directories(${DEMO_NAME}
         ${CMAKE_BINARY_DIR}
         include)
 
-target_link_libraries(${DEMO_NAME} PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets ZepQt Zep Mal ${PLATFORM_LINKLIBS})
+target_link_libraries(${DEMO_NAME} PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets Zep ${PLATFORM_LINKLIBS})
 target_compile_options(${DEMO_NAME} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/W3>) # Workaround Qt + MSVC 19 compile issue in release build.
-add_dependencies(${DEMO_NAME} ZepQt Zep)
+add_dependencies(${DEMO_NAME} Zep)
 
 if(WIN32)
 message(STATUS "Copying required Qt libraries and binaries to output directory....")

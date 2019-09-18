@@ -54,16 +54,11 @@ include(m3rdparty/cmake/copy_files.cmake)
 # The main library
 include(src/CMakeLists.txt)
 
-# ImGui and Qt support libraries
-include (src/imgui/CMakeLists.txt)
-include (src/qt/CMakeLists.txt)
-
 include (tests/CMakeLists.txt)
 
 # Demos require example interpreter and other 3rdparty
 IF (BUILD_DEMOS)
 include(${M3RDPARTY_DIR}/list.cmake)
-include(${M3RDPARTY_DIR}/mal/list.cmake)
 include(demo_imgui/CMakeLists.txt)
 include(demo_qt/CMakeLists.txt)
 ENDIF()

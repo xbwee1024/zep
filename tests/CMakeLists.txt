@@ -23,9 +23,9 @@ set (TEST_SOURCES
 
 add_executable (unittests ${TEST_SOURCES} )
 
-add_dependencies(unittests ZepImGui Zep)
+add_dependencies(unittests Zep)
 
-target_link_libraries (unittests PRIVATE ZepImGui Zep ${PLATFORM_LINKLIBS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (unittests PRIVATE Zep ${PLATFORM_LINKLIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 add_test(unittests unittests)
 

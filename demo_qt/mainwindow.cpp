@@ -1,4 +1,3 @@
-#include "mainwindow.h"
 #include <QPainter>
 #include <QMenu>
 #include <QMenuBar>
@@ -14,8 +13,8 @@
 #include "zep/window.h"
 
 #include "zep/qt/zepwidget_qt.h"
-
 #include "config_app.h"
+#include "mainwindow.h"
 
 using namespace Zep;
 

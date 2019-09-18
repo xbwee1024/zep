@@ -3,15 +3,15 @@
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 // (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
 
-#include "imgui.h"
+#include "imgui/imgui.h"
 
-#include "examples/imgui_impl_opengl3.h"
-#include "examples/imgui_impl_sdl.h"
+#include "imgui/examples/imgui_impl_opengl3.h"
+#include "imgui/examples/imgui_impl_sdl.h"
 #include <SDL.h>
 #include <stdio.h>
 #include <thread>
 
-#include "tclap/CmdLine.h"
+#include <mutils/tclap/CmdLine.h>
 
 #include "config_app.h"
 
@@ -40,14 +40,14 @@
 #include "zep/tab_window.h"
 #include "zep/window.h"
 
-#include "tfd/tinyfiledialogs.h"
-
+#include <tfd/tinyfiledialogs.h>
+ 
 #ifndef __APPLE__
-#include "FileWatcher/watcher.h"
+#include <FileWatcher/watcher.h>
 #endif
 
-#include "mal/mal.h"
-#include "mal/environment.h"
+//#include "mal/mal.h"
+//#include "mal/environment.h"
 
 using namespace Zep;
 
@@ -150,11 +150,13 @@ struct ZepContainer : public IZepComponent, public ZepRepl
 #endif
 
         // Demo of how to implement a repl
+        /*
         spEnv = malInit();
         fnParser = [&](const std::string& str) -> std::string
         {
             return malRepl(str, spEnv);
         };
+        */
 
         spEditor->RegisterCallback(this);
         spEditor->SetPixelScale(GetDisplayScale());
@@ -272,7 +274,7 @@ struct ZepContainer : public IZepComponent, public ZepRepl
 
     bool quit = false;
     std::unique_ptr<ZepEditor_ImGui> spEditor;
-    malEnvPtr spEnv;
+    //malEnvPtr spEnv;
 };
 
 int main(int argc, char** argv)
