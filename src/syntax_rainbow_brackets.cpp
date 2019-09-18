@@ -12,6 +12,8 @@ ZepSyntaxAdorn_RainbowBrackets::ZepSyntaxAdorn_RainbowBrackets(ZepSyntax& syntax
     : ZepSyntaxAdorn(syntax, buffer)
 {
     syntax.GetEditor().RegisterCallback(this);
+    
+    Update(0, buffer.EndLocation());
 }
 
 ZepSyntaxAdorn_RainbowBrackets::~ZepSyntaxAdorn_RainbowBrackets()

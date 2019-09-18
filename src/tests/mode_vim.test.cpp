@@ -294,6 +294,9 @@ COMMAND_TEST(dot_command, "one two three four", "daw..", "four");
 // Join
 COMMAND_TEST(join_lines, "one\ntwo", "J", "onetwo");
 
+// TODO: Join should leave a space
+COMMAND_TEST(join_lines_skip_ws, "one\n   two", "J", "onetwo");
+
 // Insert
 COMMAND_TEST(insert_a_text, "one three", "lllatwo ", "one two three")
 COMMAND_TEST(insert_i_text, "one three", "lllitwo", "onetwo three")

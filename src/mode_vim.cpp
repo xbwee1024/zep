@@ -943,10 +943,14 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
         }
     }
     else if (context.command == "J")
-    {
+    { 
         // Delete the CR (and thus join lines)
         context.beginRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineCRBegin);
         context.endRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::BeyondLineEnd);
+
+        // Skip white space (as the J append command does)
+        context.endRange = buffer.GetLinePos(context.endRange, LineLocation::LineFirstGraphChar);
+
         context.op = CommandOperation::Delete;
     }
     else if (context.command == "v" || context.command == "V")
