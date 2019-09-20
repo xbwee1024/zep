@@ -43,7 +43,6 @@ enum : uint32_t
     Locked = (1 << 3), // Can this file path ever be written to?
     Dirty = (1 << 4), // Has the file been changed?
     NotYetSaved = (1 << 5),
-    FirstInit = (1 << 6)
 };
 };
 
@@ -219,10 +218,15 @@ public:
             m_fileFlags &= ~flag;
         }
     }
-    void SetSyntax(std::shared_ptr<ZepSyntax> spSyntax)
+    void SetSyntaxProvider(SyntaxProvider provider)
     {
-        m_spSyntax = spSyntax;
+        if (provider.syntaxID != m_syntaxProvider.syntaxID)
+        {
+            m_spSyntax = provider.factory(this);
+            m_syntaxProvider = provider;
+        }
     }
+
     ZepSyntax* GetSyntax() const
     {
         return m_spSyntax.get();
@@ -271,7 +275,7 @@ private:
     bool m_dirty = false; // Is the text modified?
     GapBuffer<utf8> m_gapBuffer; // Storage for the text - a gap buffer for efficiency
     std::vector<long> m_lineEnds; // End of each line
-    uint32_t m_fileFlags = FileFlags::NotYetSaved | FileFlags::FirstInit;
+    uint32_t m_fileFlags = FileFlags::NotYetSaved;
     BufferType m_bufferType = BufferType::Normal;
     std::shared_ptr<ZepSyntax> m_spSyntax;
     std::string m_strName;
@@ -283,17 +287,19 @@ private:
     BufferLocation m_lastLocation{ 0 };
     std::shared_ptr<ZepMode> m_spMode;
     ZepRepl* m_replProvider = nullptr; // May not be set
+    SyntaxProvider m_syntaxProvider;
 };
 
 // Notification payload
 enum class BufferMessageType
 {
+    // Inform clients that we are about to mess with the buffer
     PreBufferChange = 0,
     TextChanged,
     TextDeleted,
-    TextAdded,
-    Initialized
+    TextAdded
 };
+
 struct BufferMessage : public ZepMessage
 {
     BufferMessage(ZepBuffer* pBuff, BufferMessageType messageType, const BufferLocation& startLoc, const BufferLocation& endLoc)

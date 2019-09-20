@@ -78,7 +78,7 @@ public:
 
     virtual NVec2i GetVisualRange() const;
 
-    virtual bool HandleGlobalCtrlCommand(const std::string& cmd, uint32_t modifiers, bool& needMoreChars) const;
+    virtual bool HandleGlobalCtrlCommand(const std::string& cmd, uint32_t modifiers, bool& needMoreChars);
 
 protected:
     std::stack<std::shared_ptr<ZepCommand>> m_undoStack;

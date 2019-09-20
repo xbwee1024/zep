@@ -2,7 +2,6 @@
 #include <sstream>
 
 #include "zep/buffer.h"
-#include "zep/commands.h"
 #include "zep/mode_search.h"
 #include "zep/mode_vim.h"
 #include "zep/tab_window.h"
@@ -949,9 +948,12 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
         context.endRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::BeyondLineEnd);
 
         // Skip white space (as the J append command does)
+        context.tempReg.text = " ";
+        context.pRegister = &context.tempReg;
         context.endRange = buffer.GetLinePos(context.endRange, LineLocation::LineFirstGraphChar);
+        context.replaceRangeMode = ReplaceRangeMode::Replace;
 
-        context.op = CommandOperation::Delete;
+        context.op = CommandOperation::Replace;
     }
     else if (context.command == "v" || context.command == "V")
     {
@@ -1131,6 +1133,7 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
                 return true;
             }
 
+            context.replaceRangeMode = ReplaceRangeMode::Fill;
             context.op = CommandOperation::Replace;
             context.tempReg.text = context.command[1];
             context.pRegister = &context.tempReg;
@@ -1346,11 +1349,6 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
         Undo();
         return true;
     }
-    else if (context.command == "r" && context.modifierKeys == ModifierKey::Ctrl)
-    {
-        Redo();
-        return true;
-    }
     else if (context.command[0] == 'i')
     {
         if (m_currentMode == EditorMode::Visual)
@@ -1525,6 +1523,7 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
     {
         auto cmd = std::make_shared<ZepCommand_ReplaceRange>(
             context.buffer,
+            context.replaceRangeMode,
             context.beginRange,
             context.endRange,
             context.pRegister->text,

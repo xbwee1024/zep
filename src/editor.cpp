@@ -230,7 +230,7 @@ void ZepEditor::RemoveBuffer(ZepBuffer* pBuffer)
 ZepBuffer* ZepEditor::GetEmptyBuffer(const std::string& name, uint32_t fileFlags)
 {
     auto pBuffer = CreateNewBuffer(name);
-    pBuffer->SetFlags(fileFlags | FileFlags::FirstInit, true);
+    pBuffer->SetFlags(fileFlags, true);
     return pBuffer;
 }
 
@@ -529,7 +529,7 @@ void ZepEditor::SetBufferSyntax(ZepBuffer& buffer) const
         auto itr = m_mapSyntax.find(fileName);
         if (itr != m_mapSyntax.end())
         {
-            buffer.SetSyntax(itr->second(&buffer));
+            buffer.SetSyntaxProvider(itr->second);
             return;
         }
     }
@@ -537,19 +537,27 @@ void ZepEditor::SetBufferSyntax(ZepBuffer& buffer) const
     auto itr = m_mapSyntax.find(ext);
     if (itr != m_mapSyntax.end())
     {
-        buffer.SetSyntax(itr->second(&buffer));
+        buffer.SetSyntaxProvider(itr->second);
     }
     else
     {
-        buffer.SetSyntax(nullptr);
+        itr = m_mapSyntax.find(string_tolower(buffer.GetName()));
+        if (itr != m_mapSyntax.end())
+        {
+            buffer.SetSyntaxProvider(itr->second);
+        }
+        else
+        {
+            buffer.SetSyntaxProvider(SyntaxProvider{});
+        }
     }
 }
 
-void ZepEditor::RegisterSyntaxFactory(const std::vector<std::string>& mappings, tSyntaxFactory factory)
+void ZepEditor::RegisterSyntaxFactory(const std::vector<std::string>& mappings, SyntaxProvider provider)
 {
     for (auto& m : mappings)
     {
-        m_mapSyntax[string_tolower(m)] = factory;
+        m_mapSyntax[string_tolower(m)] = provider;
     }
 }
 
@@ -577,6 +585,7 @@ const std::deque<std::shared_ptr<ZepBuffer>>& ZepEditor::GetBuffers() const
 ZepBuffer* ZepEditor::CreateNewBuffer(const std::string& str)
 {
     auto pBuffer = std::make_shared<ZepBuffer>(*this, str);
+    SetBufferSyntax(*pBuffer);
     m_buffers.push_front(pBuffer);
 
     LOG(DEBUG) << "Added buffer: " << str;
@@ -627,15 +636,7 @@ const tRegisters& ZepEditor::GetRegisters() const
 
 void ZepEditor::Notify(std::shared_ptr<ZepMessage> pMsg)
 {
-    if (pMsg->messageId == Msg::Buffer)
-    {
-        auto pBufferMsg = std::static_pointer_cast<BufferMessage>(pMsg);
-        if (pBufferMsg->type == BufferMessageType::Initialized)
-        {
-            SetBufferSyntax(*pBufferMsg->pBuffer);
-        }
-    }
-    else if (pMsg->messageId == Msg::MouseDown)
+    if (pMsg->messageId == Msg::MouseDown)
     {
         for (auto& windowRect : m_tabRects)
         {

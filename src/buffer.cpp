@@ -638,6 +638,8 @@ void ZepBuffer::Load(const ZepPath& path)
         m_filePath = path;
         SetFlags(FileFlags::NotYetSaved);
     }
+    
+    GetEditor().SetBufferSyntax(*this);
 }
 
 bool ZepBuffer::Save(int64_t& size)
@@ -713,6 +715,7 @@ void ZepBuffer::SetFilePath(const ZepPath& path)
         m_filePath = testPath;
         SetFlags(FileFlags::NotYetSaved);
     }
+    GetEditor().SetBufferSyntax(*this);
 }
 
 // Replace the buffer buffer with the text
@@ -730,14 +733,6 @@ void ZepBuffer::SetText(const std::string& text)
 
     // Doc is not dirty
     ClearFlags(FileFlags::Dirty);
-
-    // On first init, send the initialized message to say we've initialized the buffer with something
-    // Make sure the buffer has more than the closing 0 in it
-    if (TestFlags(FileFlags::FirstInit) && m_gapBuffer.size() > 1)
-    {
-        ClearFlags(FileFlags::FirstInit);
-        GetEditor().Broadcast(std::make_shared<BufferMessage>(this, BufferMessageType::Initialized, BufferLocation{ 0 }, BufferLocation{ long(m_gapBuffer.size()) }));
-    }
 }
 
 // TODO: This can be cleaner
@@ -965,12 +960,6 @@ bool ZepBuffer::Insert(const BufferLocation& startOffset, const std::string& str
     GetEditor().Broadcast(std::make_shared<BufferMessage>(this, BufferMessageType::TextAdded, startOffset, startOffset + changeRange));
 
     SetFlags(FileFlags::Dirty);
-
-    if (TestFlags(FileFlags::FirstInit) && m_gapBuffer.size() > 1)
-    {
-        ClearFlags(FileFlags::FirstInit);
-        GetEditor().Broadcast(std::make_shared<BufferMessage>(this, BufferMessageType::Initialized, BufferLocation{ 0 }, BufferLocation{ long(m_gapBuffer.size()) }));
-    }
 
     return true;
 }

@@ -135,7 +135,7 @@ NVec2i ZepMode::GetVisualRange() const
     return NVec2i(m_visualBegin, m_visualEnd);
 }
 
-bool ZepMode::HandleGlobalCtrlCommand(const std::string& cmd, uint32_t modifiers, bool& needMoreChars) const
+bool ZepMode::HandleGlobalCtrlCommand(const std::string& cmd, uint32_t modifiers, bool& needMoreChars)
 {
     needMoreChars = false;
 
@@ -265,7 +265,7 @@ bool ZepMode::HandleGlobalCtrlCommand(const std::string& cmd, uint32_t modifiers
     }
     else if (cmd == "r")
     {
-        GetEditor().AddRepl();
+        Redo();
         return true;
     }
     return false;

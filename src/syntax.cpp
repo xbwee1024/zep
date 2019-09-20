@@ -128,11 +128,6 @@ void ZepSyntax::Notify(std::shared_ptr<ZepMessage> spMsg)
             Interrupt();
             QueueUpdateSyntax(spBufferMsg->startLocation, spBufferMsg->endLocation);
         }
-        else if (spBufferMsg->type == BufferMessageType::Initialized)
-        {
-            Interrupt();
-            QueueUpdateSyntax(spBufferMsg->startLocation, spBufferMsg->endLocation);
-        }
     }
 }
 

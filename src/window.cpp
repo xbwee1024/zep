@@ -156,9 +156,10 @@ void ZepWindow::Notify(std::shared_ptr<ZepMessage> payload)
 
         if (pMsg->type != BufferMessageType::PreBufferChange)
         {
-            // Put the cursor where the replaced text was added
+            // Make sure the cursor is on its 'display' part of the flash cycle after an edit.
             GetEditor().ResetCursorTimer();
         }
+        // Remove tooltips that might be present
         DisableToolTipTillMove();
     }
     else if (payload->messageId == Msg::ComponentChanged)

@@ -172,6 +172,12 @@ using tRegisters = std::map<std::string, Register>;
 using tBuffers = std::deque<std::shared_ptr<ZepBuffer>>;
 using tSyntaxFactory = std::function<std::shared_ptr<ZepSyntax>(ZepBuffer*)>;
 
+struct SyntaxProvider
+{
+    std::string syntaxID;
+    tSyntaxFactory factory = nullptr;
+};
+
 const float bottomBorder = 4.0f;
 const float textBorder = 4.0f;
 const float leftBorderChars = 3;
@@ -196,7 +202,7 @@ public:
 
     void Display();
 
-    void RegisterSyntaxFactory(const std::vector<std::string>& mappings, tSyntaxFactory factory);
+    void RegisterSyntaxFactory(const std::vector<std::string>& mappings, SyntaxProvider factory);
     bool Broadcast(std::shared_ptr<ZepMessage> payload);
     void RegisterCallback(IZepComponent* pClient)
     {
@@ -319,7 +325,7 @@ private:
     std::shared_ptr<ZepTheme> m_spTheme;
     std::shared_ptr<ZepMode_Vim> m_spVimMode;
     std::shared_ptr<ZepMode_Standard> m_spStandardMode;
-    std::map<std::string, tSyntaxFactory> m_mapSyntax;
+    std::map<std::string, SyntaxProvider> m_mapSyntax;
     std::map<std::string, std::shared_ptr<ZepMode>> m_mapModes;
 
     // Blinking cursor
