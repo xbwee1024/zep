@@ -8,7 +8,7 @@ namespace Zep
 ZepTheme::ZepTheme()
 {
     double golden_ratio_conjugate = 0.618033988749895;
-    double h = .4f;
+    double h = .85f;
     for (int i = 0; i < (int)ThemeColor::UniqueColorLast; i++)
     {
         h += golden_ratio_conjugate;

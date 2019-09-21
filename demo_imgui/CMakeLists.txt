@@ -26,6 +26,7 @@ target_include_directories(${DEMO_NAME}
         ${M3RDPARTY_DIR})
 
 copy_existing_files(${DEMO_NAME} ${MUTILS_INCLUDE_DIR}/imgui/misc/fonts/ProggyClean.ttf ${CMAKE_CURRENT_BINARY_DIR}/$(Configuration) )
+copy_existing_files(${DEMO_NAME} ${MUTILS_INCLUDE_DIR}/tinyscheme/init.scm ${CMAKE_CURRENT_BINARY_DIR}/$(Configuration) )
 
 target_link_libraries (${DEMO_NAME} 
     PRIVATE

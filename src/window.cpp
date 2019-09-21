@@ -660,9 +660,9 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
         }
         else
         {
+            auto centerChar = NVec2f(screenPosX + textSize.x / 2, ToWindowY(lineInfo.spanYPx) + textSize.y / 2);
             if (pSyntax && pSyntax->GetSyntaxAt(ch).foreground == ThemeColor::Whitespace)
             {
-                auto centerChar = NVec2f(screenPosX + textSize.x / 2, ToWindowY(lineInfo.spanYPx) + textSize.y / 2);
                 display.DrawRectFilled(NRectf(centerChar - NVec2f(1.0f, 1.0f), centerChar + NVec2f(1.0f, 1.0f)), m_pBuffer->GetTheme().GetColor(ThemeColor::Whitespace));
             }
             else
@@ -684,6 +684,8 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
                     }
                 }
 
+                // Background color
+                display.DrawRectFilled(NRectf(centerChar - NVec2f(1.0f, 1.0f), centerChar + NVec2f(1.0f, 1.0f)), m_pBuffer->GetTheme().GetColor(pSyntax->GetSyntaxAt(ch).background));
                 display.DrawChars(NVec2f(screenPosX, ToWindowY(lineInfo.spanYPx)), col, pCh, pEnd);
             }
         }

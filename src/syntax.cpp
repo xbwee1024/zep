@@ -166,12 +166,13 @@ void ZepSyntax::UpdateSyntax()
     itrEnd = buffer.find_first_of(itrEnd, buffer.end(), lineEnd.begin(), lineEnd.end());
 
     // Mark a region of the syntax buffer with the correct marker
-    auto mark = [&](GapBuffer<utf8>::const_iterator itrA, GapBuffer<utf8>::const_iterator itrB, ThemeColor type) {
-        std::fill(m_syntax.begin() + (itrA - buffer.begin()), m_syntax.begin() + (itrB - buffer.begin()), SyntaxData{ type });
+    auto mark = [&](GapBuffer<utf8>::const_iterator itrA, GapBuffer<utf8>::const_iterator itrB, ThemeColor type, ThemeColor background) {
+        std::fill(m_syntax.begin() + (itrA - buffer.begin()), m_syntax.begin() + (itrB - buffer.begin()), SyntaxData{ type, background });
     };
 
-    auto markSingle = [&](GapBuffer<utf8>::const_iterator itrA, ThemeColor type) {
+    auto markSingle = [&](GapBuffer<utf8>::const_iterator itrA, ThemeColor type, ThemeColor background) {
         (m_syntax.begin() + (itrA - buffer.begin()))->foreground = type;
+        (m_syntax.begin() + (itrA - buffer.begin()))->background = background;
     };
 
     // Update start location
@@ -202,7 +203,7 @@ void ZepSyntax::UpdateSyntax()
         {
             if (*itr == ' ')
             {
-                mark(itr, itr + 1, ThemeColor::Whitespace);
+                mark(itr, itr + 1, ThemeColor::Whitespace, ThemeColor::Background);
             }
         }
 
@@ -215,23 +216,23 @@ void ZepSyntax::UpdateSyntax()
 
         if (m_keywords.find(token) != m_keywords.end())
         {
-            mark(itrFirst, itrLast, ThemeColor::Keyword);
+            mark(itrFirst, itrLast, ThemeColor::Keyword, ThemeColor::Background);
         }
         else if (m_identifiers.find(token) != m_identifiers.end())
         {
-            mark(itrFirst, itrLast, ThemeColor::Identifier);
+            mark(itrFirst, itrLast, ThemeColor::Identifier, ThemeColor::Background);
         }
         else if (token.find_first_not_of("0123456789") == std::string::npos)
         {
-            mark(itrFirst, itrLast, ThemeColor::Number);
+            mark(itrFirst, itrLast, ThemeColor::Number, ThemeColor::Background);
         }
         else if (token.find_first_not_of("{}()[]") == std::string::npos)
         {
-            mark(itrFirst, itrLast, ThemeColor::Parenthesis);
+            mark(itrFirst, itrLast, ThemeColor::Parenthesis, ThemeColor::Background);
         }
         else
         {
-            mark(itrFirst, itrLast, ThemeColor::Normal);
+            mark(itrFirst, itrLast, ThemeColor::Normal, ThemeColor::Background);
         }
 
         // Find String
@@ -247,7 +248,7 @@ void ZepSyntax::UpdateSyntax()
                     if (*itrString == ch)
                     {
                         itrString++;
-                        mark(itrFirst, itrString, ThemeColor::String);
+                        mark(itrFirst, itrString, ThemeColor::String, ThemeColor::Background);
                         itrLast = itrString + 1;
                         break;
                     }
@@ -279,7 +280,7 @@ void ZepSyntax::UpdateSyntax()
                 if (*itrComment == '/')
                 {
                     itrLast = buffer.find_first_of(itrCommentStart, buffer.end(), lineEnd.begin(), lineEnd.end());
-                    mark(itrCommentStart, itrLast, ThemeColor::Comment);
+                    mark(itrCommentStart, itrLast, ThemeColor::Comment, ThemeColor::Background);
                 }
             }
         }

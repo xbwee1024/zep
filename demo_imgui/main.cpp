@@ -11,7 +11,9 @@
 #include <stdio.h>
 #include <thread>
 
+#include <mutils/logger/logger.h>
 #include <mutils/tclap/CmdLine.h>
+#include <mutils/file/file.h>
 
 #include "config_app.h"
 
@@ -36,25 +38,26 @@
 #include "zep/imgui/editor_imgui.h"
 #include "zep/mode_standard.h"
 #include "zep/mode_vim.h"
-#include "zep/theme.h"
 #include "zep/tab_window.h"
+#include "zep/theme.h"
 #include "zep/window.h"
 
 #include <tfd/tinyfiledialogs.h>
- 
+
 #ifndef __APPLE__
 #include <FileWatcher/watcher.h>
 #endif
 
-//#include "mal/mal.h"
-//#include "mal/environment.h"
+#include "tinyscheme/dynload.h"
+#include "tinyscheme/scheme.h"
 
 using namespace Zep;
-
-//#include "src/tests/longtext.tt"
+using namespace MUtils;
 
 namespace
 {
+scheme sc;
+char out[MAX_PATH];
 
 const std::string shader = R"R(
 #version 330 core
@@ -146,17 +149,32 @@ struct ZepContainer : public IZepComponent, public ZepRepl
                 spEditor->OnFileChanged(ZepPath(ZEP_ROOT) / path);
             }
         },
-                                             false);
+            false);
 #endif
 
-        // Demo of how to implement a repl
-        /*
-        spEnv = malInit();
-        fnParser = [&](const std::string& str) -> std::string
+        auto bindOutputPort = []()
         {
-            return malRepl(str, spEnv);
+            memset(out, 0, MAX_PATH);
+            sc.outport = sc.NIL;
+            scheme_set_output_port_string(&sc, out, &out[MAX_PATH]);
         };
-        */
+
+        //memset(&sc, 0, sizeof(sc));
+        if (!scheme_init(&sc))
+        {
+            LOG(INFO) << "Could not create tiny scheme";
+        }
+
+        bindOutputPort();
+
+        auto strInit = file_read(fs::path(SDL_GetBasePath()) / "init.scm");
+        scheme_load_string(&sc, strInit.c_str());
+
+        fnParser = [&](const std::string& str) -> std::string {
+            bindOutputPort();
+            scheme_load_string(&sc, str.c_str());
+            return out;
+        };
 
         spEditor->RegisterCallback(this);
         spEditor->SetPixelScale(GetDisplayScale());
@@ -193,7 +211,7 @@ struct ZepContainer : public IZepComponent, public ZepRepl
             return false;
         }
         else if (count == 0)
-        { 
+        {
             return true;
         }
 
