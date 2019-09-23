@@ -12,6 +12,7 @@ set(MANIFEST_SOURCE ${ZEP_ROOT}/dpiawarescaling.manifest)
 ENDIF()
 set(DEMO_SOURCE_IMGUI
     ${ZEP_ROOT}/demo_imgui/main.cpp
+    ${ZEP_ROOT}/demo_imgui/chibi.cpp
     ${ZEP_ROOT}/demo_imgui/CMakeLists.txt)
 
 add_executable (${DEMO_NAME} WIN32 # Win32 ignored on windows 
