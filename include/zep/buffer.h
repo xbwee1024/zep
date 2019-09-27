@@ -127,7 +127,7 @@ struct RangeMarker
 struct ZepRepl
 {
     std::function<std::string(const std::string&)> fnParser;
-    virtual bool IsFormComplete(const std::string&, int& indent) = 0;
+    std::function<bool(const std::string&, int&)> fnIsFormComplete;
 };
 
 using tRangeMarkers = std::vector<std::shared_ptr<RangeMarker>>;

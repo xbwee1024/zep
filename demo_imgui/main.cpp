@@ -14,10 +14,10 @@
 #include <mutils/file/file.h>
 #include <mutils/logger/logger.h>
 #include <mutils/tclap/CmdLine.h>
+#include <mutils/chibi/chibi.h>
 
 #include "config_app.h"
 
-#include "chibi.h"
 
 // About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual function pointers to be loaded manually.
 // Helper libraries are often used for this purpose! Here we are supporting a few common ones: gl3w, glew, glad.
@@ -58,7 +58,8 @@ using namespace MUtils;
 
 namespace
 {
-char out[MAX_PATH];
+
+Chibi scheme;
 
 const std::string shader = R"R(
 #version 330 core
@@ -135,48 +136,6 @@ bool ReadCommandLine(int argc, char** argv, int& exitCode)
     return true;
 }
 
-#define sexp_argv_symbol "command-line"
-#define sexp_import_prefix "(import ("
-#define sexp_import_suffix "))"
-#define sexp_environment_prefix "(environment '("
-#define sexp_environment_suffix "))"
-#define sexp_trace_prefix "(module-env (load-module '("
-#define sexp_trace_suffix ")))"
-#define sexp_default_environment "(environment '(scheme small))"
-#define sexp_advice_environment "(load-module '(chibi repl))"
-
-#define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
-
-/*
-static sexp check_exception (sexp ctx, sexp res) {
-  sexp_gc_var4(err, advise, sym, tmp);
-  if (res && sexp_exceptionp(res)) {
-    sexp_gc_preserve4(ctx, err, advise, sym, tmp);
-    tmp = res;
-    err = sexp_current_error_port(ctx);
-    if (! sexp_oportp(err))
-      err = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
-    sexp_print_exception(ctx, res, err);
-    sexp_stack_trace(ctx, err);
-#if SEXP_USE_MAIN_ERROR_ADVISE
-    if (sexp_envp(sexp_global(ctx, SEXP_G_META_ENV))) {
-      advise = sexp_eval_string(ctx, sexp_advice_environment, -1, sexp_global(ctx, SEXP_G_META_ENV));
-      if (sexp_vectorp(advise)) {
-        advise = sexp_vector_ref(advise, SEXP_ONE);
-        if (sexp_envp(advise)) {
-          sym = sexp_intern(ctx, "repl-advise-exception", -1);
-          advise = sexp_env_ref(ctx, advise, sym, SEXP_FALSE);
-          if (sexp_procedurep(advise))
-            sexp_apply(ctx, advise, tmp=sexp_list2(ctx, res, err));
-        }
-      }
-    }
-#endif
-    sexp_gc_release4(ctx);
-  }
-  return res;
-}
-*/
 // A helper struct to init the editor and handle callbacks
 struct ZepContainer : public IZepComponent, public ZepRepl
 {
@@ -195,13 +154,17 @@ struct ZepContainer : public IZepComponent, public ZepRepl
             false);
 #endif
 
-        static Chibi chibi;
-        chibi_init(chibi);
+        chibi_init(scheme, SDL_GetBasePath());
 
         fnParser = [&](const std::string& str) -> std::string {
-            chibi_repl(chibi, NULL, str);
-            return sexp_string_data(sexp_write_to_string(chibi.ctx, chibi.out ));
+            auto ret = chibi_repl(scheme, NULL, str);
+            ret = RTrim(ret);
+            return ret;
+        };
 
+        fnIsFormComplete = [&](const std::string& str, int& indent)
+        {
+            return IsFormComplete(str, indent);
         };
 
         spEditor->RegisterCallback(this);
@@ -222,7 +185,7 @@ struct ZepContainer : public IZepComponent, public ZepRepl
         spEditor->UnRegisterCallback(this);
     }
 
-    virtual bool IsFormComplete(const std::string& str, int& indent) override
+    bool IsFormComplete(const std::string& str, int& indent)
     {
         int count = 0;
         for (auto& ch : str)
@@ -325,6 +288,7 @@ struct ZepContainer : public IZepComponent, public ZepRepl
 
 int main(int argc, char** argv)
 {
+    //::AllocConsole();
     int code;
     ReadCommandLine(argc, argv, code);
     if (code != 0)

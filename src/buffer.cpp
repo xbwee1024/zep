@@ -54,6 +54,11 @@ inline bool IsSpace(const char c)
     auto ch = ToASCII(c);
     return ch == ' ';
 }
+inline bool IsSpaceOrNewline(const char c)
+{
+    auto ch = ToASCII(c);
+    return ch == ' ' || ch == '\n';
+}
 inline bool IsSpaceOrTerminal(const char c)
 {
     auto ch = ToASCII(c);
@@ -470,7 +475,7 @@ BufferLocation ZepBuffer::EndWordMotion(BufferLocation start, uint32_t searchTyp
         }
 
         // Skip any spaces
-        Skip(IsSpace, start, dir);
+        Skip(IsSpaceOrNewline, start, dir);
 
         // Go back to the beginning of the word
         if (Skip(IsWord, start, dir))

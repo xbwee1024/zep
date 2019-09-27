@@ -12,7 +12,6 @@ set(MANIFEST_SOURCE ${ZEP_ROOT}/dpiawarescaling.manifest)
 ENDIF()
 set(DEMO_SOURCE_IMGUI
     ${ZEP_ROOT}/demo_imgui/main.cpp
-    ${ZEP_ROOT}/demo_imgui/chibi.cpp
     ${ZEP_ROOT}/demo_imgui/CMakeLists.txt)
 
 add_executable (${DEMO_NAME} WIN32 # Win32 ignored on windows 
@@ -27,7 +26,7 @@ target_include_directories(${DEMO_NAME}
         ${M3RDPARTY_DIR})
 
 copy_existing_files(${DEMO_NAME} ${MUTILS_INCLUDE_DIR}/imgui/misc/fonts/ProggyClean.ttf ${CMAKE_CURRENT_BINARY_DIR}/$(Configuration) )
-copy_existing_files(${DEMO_NAME} ${MUTILS_INCLUDE_DIR}/tinyscheme/init.scm ${CMAKE_CURRENT_BINARY_DIR}/$(Configuration) )
+copy_existing_files(${DEMO_NAME} ${MUTILS_INCLUDE_DIR}/chibi/init-7.scm ${CMAKE_CURRENT_BINARY_DIR}/$(Configuration) )
 
 target_link_libraries (${DEMO_NAME} 
     PRIVATE

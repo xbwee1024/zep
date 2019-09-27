@@ -105,7 +105,7 @@ void ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t modifiers)
         if (m_pRepl)
         {
             int indent = 0;
-            bool complete = m_pRepl->IsFormComplete(str, indent);
+            bool complete = m_pRepl->fnIsFormComplete ? m_pRepl->fnIsFormComplete(str, indent) : true;
             if (!complete)
             {
                 // If the indent is < 0, we completed too much of the expression, so don't let the user hit return until they 
