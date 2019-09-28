@@ -13,8 +13,8 @@
 
 #include <mutils/file/file.h>
 #include <mutils/logger/logger.h>
-#include <mutils/tclap/CmdLine.h>
 #include <mutils/chibi/chibi.h>
+#include <tclap/CmdLine.h>
 
 #include "config_app.h"
 
