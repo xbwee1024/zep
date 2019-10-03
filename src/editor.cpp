@@ -111,12 +111,9 @@ void ZepEditor::OnFileChanged(const ZepPath& path)
 {
     if (path.filename() == "zep.cfg")
     {
-        if (m_spConfig)
-        {
-            LOG(INFO) << "Reloading config";
-            LoadConfig(path);
-            Broadcast(std::make_shared<ZepMessage>(Msg::ConfigChanged));
-        }
+        LOG(INFO) << "Reloading config";
+        LoadConfig(path);
+        Broadcast(std::make_shared<ZepMessage>(Msg::ConfigChanged));
     }
 }
 
@@ -131,11 +128,23 @@ void ZepEditor::LoadConfig(const ZepPath& config_path)
 
     try
     {
-        m_spConfig = cpptoml::parse_file(config_path.string());
-        if (m_spConfig == nullptr)
+        std::shared_ptr<cpptoml::table> spConfig;
+        spConfig = cpptoml::parse_file(config_path.string());
+        if (spConfig == nullptr)
             return;
 
-        m_showScrollBar = m_spConfig->get_qualified_as<uint32_t>("editor.show_scrollbar").value_or(1);
+        m_config.showScrollBar = spConfig->get_qualified_as<uint32_t>("editor.show_scrollbar").value_or(1);
+        m_config.lineMarginTop = spConfig->get_qualified_as<uint32_t>("editor.line_margin_top").value_or(1);
+        m_config.lineMarginBottom = spConfig->get_qualified_as<uint32_t>("editor.line_margin_bottom").value_or(1);
+        auto styleStr = string_tolower(spConfig->get_qualified_as<std::string>("editor.style").value_or("normal"));
+        if (styleStr == "normal")
+        {
+            m_config.style = EditorStyle::Normal;
+        }
+        else if (styleStr == "minimal")
+        {
+            m_config.style = EditorStyle::Minimal;
+        }
     }
     catch (cpptoml::parse_exception& ex)
     {
@@ -149,13 +158,6 @@ void ZepEditor::LoadConfig(const ZepPath& config_path)
         str << config_path.filename().string() << " : Failed to parse. ";
         SetCommandText(str.str());
     }
-    /*
-    m_spConfig = archive_load(config_path, GetFileSystem().Read(config_path));
-    if (m_spConfig)
-    {
-        archive_bind(*m_spConfig, "editor", "show_scrollbar", m_showScrollBar);
-    }
-    */
 }
 
 void ZepEditor::SaveBuffer(ZepBuffer& buffer)
@@ -743,7 +745,7 @@ void ZepEditor::Display()
     auto commandSpace = commandCount;
     commandSpace = std::max(commandCount, 0l);
 
-    GetDisplay().DrawRectFilled(m_editorRegion->rect, GetTheme().GetColor(ThemeColor::Background));
+    //GetDisplay().DrawRectFilled(m_editorRegion->rect, GetTheme().GetColor(ThemeColor::Background));
 
     // Background rect for CommandLine
     m_pDisplay->DrawRectFilled(m_commandRegion->rect, GetTheme().GetColor(ThemeColor::Background));
@@ -832,18 +834,6 @@ void ZepEditor::SetPixelScale(float scale)
 float ZepEditor::GetPixelScale() const
 {
     return m_pixelScale;
-}
-
-void ZepEditor::SetLineSpace(int lineSpace)
-{
-    m_lineSpace = lineSpace;
-    for (auto& pTabWindow : m_tabWindows)
-    {
-        for (auto& pWindow : pTabWindow->GetWindows())
-        {
-            pWindow->UpdateLayout(true);
-        }
-    }
 }
 
 } // namespace Zep

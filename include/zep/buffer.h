@@ -99,7 +99,8 @@ enum
     CursorTip = (1 << 4),           // Tooltip shown if the user cursor is on the Mark
     CursorTipAtLine = (1 << 5),     // Tooltip shown if the user cursor is on the Mark line
     Indicator = (1 << 6),           // Show an indicator on the left side
-    All = Underline | Tooltip | TooltipAtLine | CursorTip | CursorTipAtLine | Indicator | Background
+    TooltipRightLine = (1 << 7),    // Show the tooltip on the right of the line
+    All = Underline | Tooltip | TooltipAtLine | CursorTip | CursorTipAtLine | Indicator | Background | TooltipRightLine
 };
 };
 

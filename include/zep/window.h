@@ -22,9 +22,16 @@ struct SpanInfo
     BufferRange columnOffsets;                 // Begin/end range of the text buffer for this line, as always end is one beyond the end.
     long lastNonCROffset = InvalidOffset; // The last char that is visible on the line (i.e. not CR/LF)
     float spanYPx = 0.0f;                 // Position in the buffer in pixels, if the screen was as big as the buffer.
+    float textHeight = 0.0f;              // Height of the text region in the line
+    NVec2f margins = NVec2f(1.0f, 1.0f);  // Margin above and below the line
     long bufferLineNumber = 0;            // Line in the original buffer, not the screen line
     int lineIndex = 0;
     NVec2f pixelRenderRange;              // The x limits of where this line was last renderered
+
+    float FullLineHeight() const
+    {
+        return margins.x + margins.y + textHeight;
+    }
 
     long Length() const
     {
@@ -160,6 +167,13 @@ private:
         };
     };
 
+    enum class ToolTipPos
+    {
+        AboveLine,
+        BelowLine,
+        RightLine
+    };
+
 private:
     void UpdateLineSpans();
     void ScrollToCursor();
@@ -167,6 +181,7 @@ private:
     void UpdateVisibleLineRange();
     bool IsInsideTextRegion(NVec2i pos) const;
 
+    void GetCharPointer(BufferLocation loc, const utf8*& pBegin, const utf8*& pEnd, bool& invalidChar);
     const SpanInfo& GetCursorLineInfo(long y);
 
     void DisplayToolTip(const NVec2f& pos, const RangeMarker& marker) const;
@@ -176,6 +191,7 @@ private:
 
     void GetCursorInfo(NVec2f& pos, NVec2f& size);
 
+    void PlaceToolTip(const NVec2f& pos, ToolTipPos location, uint32_t lineGap, const std::shared_ptr<RangeMarker> spMarker);
 private:
     NVec2f ToBufferRegion(const NVec2f& pos);
     std::shared_ptr<Region> m_bufferRegion;  // region of the display we are showing on.

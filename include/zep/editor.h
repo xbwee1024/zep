@@ -182,6 +182,20 @@ const float bottomBorder = 4.0f;
 const float textBorder = 4.0f;
 const float leftBorderChars = 3;
 
+enum class EditorStyle
+{
+    Normal = 0,
+    Minimal
+};
+
+struct EditorConfig
+{
+    uint32_t showScrollBar = 1;
+    EditorStyle style = EditorStyle::Normal;
+    uint32_t lineMarginTop = 1;
+    uint32_t lineMarginBottom = 1;
+};
+
 class ZepEditor
 {
 public:
@@ -266,14 +280,6 @@ public:
     void SetDisplayRegion(const NVec2f& topLeft, const NVec2f& bottomRight);
     void UpdateSize();
 
-    int GetLineSpace() const
-    {
-        return m_lineSpace;
-    }
-
-    // Space between lines in pixels.  Make sure it is DPI aware if you set it!
-    void SetLineSpace(int space);
-
     ZepDisplay& GetDisplay() const
     {
         return *m_pDisplay;
@@ -297,9 +303,9 @@ public:
 
     void SetBufferSyntax(ZepBuffer& buffer) const;
 
-    uint32_t GetShowScrollBar() const
+    EditorConfig GetConfig() const
     {
-        return m_showScrollBar;
+        return m_config;
     }
 
     ThreadPool& GetThreadPool() const;
@@ -321,7 +327,6 @@ private:
     std::set<IZepComponent*> m_notifyClients;
     mutable tRegisters m_registers;
 
-    std::shared_ptr<cpptoml::table> m_spConfig;
     std::shared_ptr<ZepTheme> m_spTheme;
     std::shared_ptr<ZepMode_Vim> m_spVimMode;
     std::shared_ptr<ZepMode_Standard> m_spStandardMode;
@@ -360,11 +365,9 @@ private:
     ZepPath m_rootPath;
 
     // Config
-    uint32_t m_showScrollBar = 1;
+    EditorConfig m_config;
 
     std::unique_ptr<ThreadPool> m_threadPool;
-
-    int m_lineSpace = 1;
 };
 
 } // namespace Zep

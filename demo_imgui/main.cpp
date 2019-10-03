@@ -51,7 +51,6 @@
 #endif
 #define _MATH_DEFINES_DEFINED
 #include "chibi/eval.h"
-//#include "chibi/sexp.h"
 
 using namespace Zep;
 using namespace MUtils;
@@ -364,7 +363,7 @@ int main(int argc, char** argv)
     ImFontConfig cfg;
     cfg.OversampleH = 3;
     cfg.OversampleV = 3;
-    io.Fonts->AddFontFromFileTTF((std::string(SDL_GetBasePath()) + "ProggyClean.ttf").c_str(), 15.0f * GetDisplayScale(), &cfg);
+    io.Fonts->AddFontFromFileTTF((std::string(SDL_GetBasePath()) + "ProggyClean.ttf").c_str(), 13.0f * GetDisplayScale(), &cfg);
     bool show_demo_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -508,33 +507,40 @@ int main(int argc, char** argv)
         int w, h;
         SDL_GetWindowSize(window, &w, &h);
 
-        // This is a bit messy; and I have no idea why I don't need to remove the menu fixed_size from the calculation!
-        auto menuSize = ImGui::GetStyle().FramePadding.y * 2 + ImGui::GetFontSize();
-        ImGui::SetNextWindowPos(ImVec2(0, menuSize));
-        ImGui::SetNextWindowSize(ImVec2(float(w), float(h))); // -menuSize)));
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
 
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-        ImGui::Begin("Zep", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar /*| ImGuiWindowFlags_NoScrollbar*/);
-        ImGui::PopStyleVar(4);
+        ImGui::Begin("Zep", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
 
-        // 'hide' the window contents from ImGui, so it doesn't try dragging when we move our scrollbar, etc.
-        ImGui::InvisibleButton("ZepContainer", ImGui::GetWindowSize());
 
-        // TODO: Change only when necessray
-        zep.spEditor->SetDisplayRegion(toNVec2f(ImGui::GetWindowPos()), toNVec2f(ImGui::GetWindowSize()));
+        auto min = ImGui::GetCursorScreenPos();
+        auto max = ImGui::GetContentRegionAvail();
+        if (max.x <= 0)
+            max.x = 1;
+        if (max.y <= 0)
+            max.y = 1;
+        ImGui::InvisibleButton("ZepContainer", max);
+
+        // Fill the window
+        max.x = min.x + max.x;
+        max.y = min.y + max.y;
+
+        zep.spEditor->SetDisplayRegion(NVec2f(min.x, min.y), NVec2f(max.x, max.y));
 
         // Display the editor inside this window
         zep.spEditor->Display();
         zep.spEditor->HandleInput();
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
 
         ImGui::End();
+        ImGui::PopStyleVar(4);
+        ImGui::PopStyleColor(1);
 
         // Rendering
         ImGui::Render();
