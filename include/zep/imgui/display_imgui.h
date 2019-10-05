@@ -5,7 +5,9 @@
 #include "zep/syntax.h"
 
 #include "imgui/imgui.h"
-#include "zep/mcommon/logger.h"
+
+// Can't include this publicly
+//#include "zep/mcommon/logger.h"
 
 namespace Zep
 {
