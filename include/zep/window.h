@@ -156,6 +156,13 @@ public:
 
     void UpdateLayout(bool force = false);
 
+    enum FitCriteria
+    {
+        X,
+        Y
+    };
+    bool RectFits(const NRectf& area, const NRectf& rect, FitCriteria criteria);
+
 private:
     struct WindowPass
     {
@@ -165,13 +172,6 @@ private:
             Text,
             Max
         };
-    };
-
-    enum class ToolTipPos
-    {
-        AboveLine,
-        BelowLine,
-        RightLine
     };
 
 private:
@@ -184,6 +184,7 @@ private:
     void GetCharPointer(BufferLocation loc, const utf8*& pBegin, const utf8*& pEnd, bool& invalidChar);
     const SpanInfo& GetCursorLineInfo(long y);
 
+    float TipBoxShadowWidth() const;
     void DisplayToolTip(const NVec2f& pos, const RangeMarker& marker) const;
     bool DisplayLine(SpanInfo& lineInfo, int displayPass);
     void DisplayScrollers();

@@ -65,7 +65,7 @@ SyntaxData ZepSyntaxAdorn_RainbowBrackets::GetSyntaxAt(long offset, bool& found)
     else
     {
         data.foreground = (ThemeColor)(((int32_t)ThemeColor::UniqueColor0 + itr->second.indent) % (int32_t)ThemeColor::UniqueColorLast);
-        data.background = ThemeColor::Background;
+        data.background = ThemeColor::None;
     }
         
     return data;

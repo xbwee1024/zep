@@ -363,7 +363,7 @@ int main(int argc, char** argv)
     ImFontConfig cfg;
     cfg.OversampleH = 3;
     cfg.OversampleV = 3;
-    io.Fonts->AddFontFromFileTTF((std::string(SDL_GetBasePath()) + "ProggyClean.ttf").c_str(), 13.0f * GetDisplayScale(), &cfg);
+    io.Fonts->AddFontFromFileTTF((std::string(SDL_GetBasePath()) + "ProggyClean.ttf").c_str(), 15.0f * GetDisplayScale(), &cfg);
     bool show_demo_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -511,12 +511,19 @@ int main(int argc, char** argv)
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
+        // This is a bit messy; and I have no idea why I don't need to remove the menu fixed_size from the calculation!
+        // The point of this code is to fill the main window with the Zep window
+        // It is only done once so the user can play with the window if they want to for testing
+        auto menuSize = ImGui::GetStyle().FramePadding.y * 2 + ImGui::GetFontSize();
+        ImGui::SetNextWindowPos(ImVec2(0, menuSize), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(float(w), float(h - menuSize)), ImGuiCond_Always);
+
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-        ImGui::Begin("Zep", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
+        ImGui::Begin("Zep", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
 
 
         auto min = ImGui::GetCursorScreenPos();

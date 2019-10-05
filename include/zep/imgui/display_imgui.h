@@ -5,6 +5,7 @@
 #include "zep/syntax.h"
 
 #include "imgui/imgui.h"
+#include "zep/mcommon/logger.h"
 
 namespace Zep
 {
@@ -105,6 +106,7 @@ public:
             drawList->AddRectFilled(toImVec2(rc.topLeftPx), toImVec2(rc.bottomRightPx), ToPackedABGR(color));
             drawList->PopClipRect();
         }
+        //LOG(INFO) << "Draw: RC: " << rc << ", Color:" << color;
     }
 
     void ZepDisplay_ImGui::SetClipRect(const NRectf& rc)
