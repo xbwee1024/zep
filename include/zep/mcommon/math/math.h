@@ -373,6 +373,23 @@ struct NRect
     {
         return NVec2f(bottomRightPx.x, topLeftPx.y);
     }
+
+    float Left() const
+    {
+        return topLeftPx.x;
+    }
+    float Right() const
+    {
+        return TopRight().x;
+    }
+    float Top() const
+    {
+        return TopRight().y;
+    }
+    float Bottom() const
+    {
+        return bottomRightPx.y;
+    }
     float Height() const
     {
         return bottomRightPx.y - topLeftPx.y;

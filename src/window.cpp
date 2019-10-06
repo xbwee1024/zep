@@ -477,18 +477,21 @@ void ZepWindow::DisplayToolTip(const NVec2f& pos, const RangeMarker& marker) con
     NRectf tipBox(pos.x, pos.y, textSize.x, textSize.y);
     tipBox.Adjust(0, 0, (textBorder + boxShadowWidth) * 2, (textBorder + boxShadowWidth) * 2);
 
-    GetEditor().GetDisplay().DrawRectFilled(tipBox, m_pBuffer->GetTheme().GetColor(ThemeColor::Background));
+    auto& display = GetEditor().GetDisplay();
+
+    display.SetClipRect(m_textRegion->rect);
+    display.DrawRectFilled(tipBox, m_pBuffer->GetTheme().GetColor(ThemeColor::Background));
 
     // Draw a lighter inner and a border the same color as the marker theme
     tipBox.Adjust(boxShadowWidth, boxShadowWidth, -boxShadowWidth, -boxShadowWidth);
-    GetEditor().GetDisplay().DrawRectFilled(tipBox, m_pBuffer->GetTheme().GetColor(marker.backgroundColor));
-    GetEditor().GetDisplay().DrawLine(tipBox.topLeftPx, tipBox.TopRight(), m_pBuffer->GetTheme().GetColor(marker.highlightColor));
-    GetEditor().GetDisplay().DrawLine(tipBox.BottomLeft(), tipBox.bottomRightPx, m_pBuffer->GetTheme().GetColor(marker.highlightColor));
-    GetEditor().GetDisplay().DrawLine(tipBox.topLeftPx, tipBox.BottomLeft(), m_pBuffer->GetTheme().GetColor(marker.highlightColor));
-    GetEditor().GetDisplay().DrawLine(tipBox.TopRight(), tipBox.bottomRightPx, m_pBuffer->GetTheme().GetColor(marker.highlightColor));
+    display.DrawRectFilled(tipBox, m_pBuffer->GetTheme().GetColor(marker.backgroundColor));
+    display.DrawLine(tipBox.topLeftPx, tipBox.TopRight(), m_pBuffer->GetTheme().GetColor(marker.highlightColor));
+    display.DrawLine(tipBox.BottomLeft(), tipBox.bottomRightPx, m_pBuffer->GetTheme().GetColor(marker.highlightColor));
+    display.DrawLine(tipBox.topLeftPx, tipBox.BottomLeft(), m_pBuffer->GetTheme().GetColor(marker.highlightColor));
+    display.DrawLine(tipBox.TopRight(), tipBox.bottomRightPx, m_pBuffer->GetTheme().GetColor(marker.highlightColor));
 
     // Draw the text in the box
-    GetEditor().GetDisplay().DrawChars(tipBox.topLeftPx + NVec2f(textBorder, textBorder), m_pBuffer->GetTheme().GetColor(marker.textColor), (const utf8*)marker.description.c_str());
+    display.DrawChars(tipBox.topLeftPx + NVec2f(textBorder, textBorder), m_pBuffer->GetTheme().GetColor(marker.textColor), (const utf8*)marker.description.c_str());
 }
 
 // TODO: This function draws one char at a time.  It could be more optimal at the expense of some
@@ -1001,9 +1004,9 @@ void ZepWindow::PlaceToolTip(const NVec2f& pos, ToolTipPos location, uint32_t li
             // If it is above or below, slide it to the left to fit
             if (location != ToolTipPos::RightLine)
             {
-                // Move in X to 0
+                // Move in X along to the left
                 genBox();
-                tipBox.Move((m_textRegion->rect.TopRight().x - (tipBox.Width() + textBorder)), tipBox.TopRight().y);
+                tipBox.Move(std::max(m_textRegion->rect.Left() + textBorder, (m_textRegion->rect.Right() - (tipBox.Width() + textBorder))), tipBox.Top());
             }
         }
 
@@ -1157,6 +1160,8 @@ void ZepWindow::Display()
     {
         DisplayToolTip(toolTip.first, *toolTip.second);
     }
+
+    display.SetClipRect(NRectf{});
 
     // Airline and underline
     display.DrawRectFilled(m_airlineRegion->rect, m_pBuffer->GetTheme().GetColor(ThemeColor::AirlineBackground));
