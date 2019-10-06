@@ -540,17 +540,20 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
                 NVec2f(lineInfo.pixelRenderRange.y, ToWindowY(lineInfo.spanYPx + lineInfo.FullLineHeight()))),
             m_pBuffer->GetTheme().GetColor(ThemeColor::Background));
 
-        // Maybe draw the cursor line too
-        if (IsActiveWindow() && cursorCL.x != -1)
+        if (lineInfo.BufferCursorInside(m_bufferCursor))
         {
-            if (GetBuffer().GetMode()->GetEditorMode() != EditorMode::Visual)
+            if (IsActiveWindow())
             {
-                auto& cursorLine = GetCursorLineInfo(cursorCL.y);
-
-                if (IsInsideTextRegion(cursorCL))
+                // Don't draw over the visual region
+                if (GetBuffer().GetMode()->GetEditorMode() != EditorMode::Visual)
                 {
-                    // Cursor line
-                    display.DrawRectFilled(NRectf(NVec2f(m_textRegion->rect.topLeftPx.x, cursorLine.spanYPx - m_bufferOffsetYPx + m_textRegion->rect.topLeftPx.y), NVec2f(m_textRegion->rect.bottomRightPx.x, cursorLine.spanYPx - m_bufferOffsetYPx + m_textRegion->rect.topLeftPx.y + cursorLine.FullLineHeight())), m_pBuffer->GetTheme().GetColor(ThemeColor::CursorLineBackground));
+                    auto& cursorLine = GetCursorLineInfo(cursorCL.y);
+
+                    if (IsInsideTextRegion(cursorCL))
+                    {
+                        // Cursor line
+                        display.DrawRectFilled(NRectf(NVec2f(m_textRegion->rect.topLeftPx.x, cursorLine.spanYPx - m_bufferOffsetYPx + m_textRegion->rect.topLeftPx.y), NVec2f(m_textRegion->rect.bottomRightPx.x, cursorLine.spanYPx - m_bufferOffsetYPx + m_textRegion->rect.topLeftPx.y + cursorLine.FullLineHeight())), m_pBuffer->GetTheme().GetColor(ThemeColor::CursorLineBackground));
+                    }
                 }
             }
         }
@@ -611,19 +614,6 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
                 display.DrawRectFilled(charRect, m_pBuffer->GetTheme().GetColor(pSyntax->GetSyntaxAt(ch).background));
             }
 
-            // Draw the visual selection marker second
-            if (IsActiveWindow())
-            {
-                if (GetBuffer().GetMode()->GetEditorMode() == EditorMode::Visual)
-                {
-                    auto sel = m_pBuffer->GetSelection();
-                    if (sel.ContainsLocation(ch) && !hiddenChar)
-                    {
-                        display.DrawRectFilled(NRectf(NVec2f(screenPosX, ToWindowY(lineInfo.spanYPx)), NVec2f(screenPosX + textSize.x, ToWindowY(lineInfo.spanYPx + lineInfo.FullLineHeight()))), m_pBuffer->GetTheme().GetColor(ThemeColor::VisualSelectBackground));
-                    }
-                }
-            }
-
             // Show any markers
             for (auto& marker : m_pBuffer->GetRangeMarkers())
             {
@@ -671,6 +661,20 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
                     }
                 }
             }
+            
+            // Draw the visual selection marker second
+            if (IsActiveWindow())
+            {
+                if (GetBuffer().GetMode()->GetEditorMode() == EditorMode::Visual)
+                {
+                    auto sel = m_pBuffer->GetSelection();
+                    if (sel.ContainsLocation(ch) && !hiddenChar)
+                    {
+                        display.DrawRectFilled(NRectf(NVec2f(screenPosX, ToWindowY(lineInfo.spanYPx)), NVec2f(screenPosX + textSize.x, ToWindowY(lineInfo.spanYPx + lineInfo.FullLineHeight()))), m_pBuffer->GetTheme().GetColor(ThemeColor::VisualSelectBackground));
+                    }
+                }
+            }
+
         }
         // Second pass, characters
         else
