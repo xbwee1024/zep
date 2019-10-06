@@ -194,6 +194,9 @@ struct EditorConfig
     EditorStyle style = EditorStyle::Normal;
     uint32_t lineMarginTop = 1;
     uint32_t lineMarginBottom = 1;
+    bool showLineNumbers = true;
+    bool showIndicatorRegion = true;
+    float backgroundFadeTime = 60.0f;
 };
 
 class ZepEditor
@@ -263,6 +266,9 @@ public:
 
     void ResetCursorTimer();
     bool GetCursorBlinkState() const;
+
+    void ResetLastEditTimer();
+    float GetLastEditElapsedTime() const;
 
     void RequestRefresh();
     bool RefreshRequired();
@@ -335,6 +341,9 @@ private:
 
     // Blinking cursor
     timer m_cursorTimer;
+
+    // Last edit
+    timer m_lastEditTimer;
 
     // Active mode
     ZepMode* m_pCurrentMode = nullptr;

@@ -80,6 +80,7 @@ ZepEditor::ZepEditor(ZepDisplay* pDisplay,const ZepPath& root, uint32_t flags, I
     SetGlobalMode(ZepMode_Vim::StaticName());
 
     timer_restart(m_cursorTimer);
+    timer_restart(m_lastEditTimer);
     m_commandLines.push_back("");
 
     RegisterSyntaxProviders(*this);
@@ -133,6 +134,9 @@ void ZepEditor::LoadConfig(const ZepPath& config_path)
         if (spConfig == nullptr)
             return;
 
+        m_config.showIndicatorRegion = spConfig->get_qualified_as<bool>("editor.show_indicator_region").value_or(true);
+        m_config.showLineNumbers = spConfig->get_qualified_as<bool>("editor.show_line_numbers").value_or(true);
+        m_config.backgroundFadeTime = spConfig->get_qualified_as<bool>("editor.background_fade_time").value_or(60.0f);
         m_config.showScrollBar = spConfig->get_qualified_as<uint32_t>("editor.show_scrollbar").value_or(1);
         m_config.lineMarginTop = spConfig->get_qualified_as<uint32_t>("editor.line_margin_top").value_or(1);
         m_config.lineMarginBottom = spConfig->get_qualified_as<uint32_t>("editor.line_margin_bottom").value_or(1);
@@ -384,6 +388,16 @@ void ZepEditor::UpdateWindowState()
 void ZepEditor::ResetCursorTimer()
 {
     timer_restart(m_cursorTimer);
+}
+
+void ZepEditor::ResetLastEditTimer()
+{
+    timer_restart(m_lastEditTimer);
+}
+
+float ZepEditor::GetLastEditElapsedTime() const
+{
+    return (float)timer_get_elapsed_seconds(m_lastEditTimer);
 }
 
 void ZepEditor::NextTabWindow()

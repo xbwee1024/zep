@@ -1576,6 +1576,8 @@ void ZepMode_Vim::AddKeyPress(uint32_t key, uint32_t modifierKeys)
     if (!GetCurrentWindow())
         return;
 
+    GetEditor().ResetLastEditTimer();
+
     // Reset command text - we will update it later
     GetEditor().SetCommandText("");
 

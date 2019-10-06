@@ -190,6 +190,7 @@ private:
     void DisplayScrollers();
     void DisableToolTipTillMove();
 
+    NVec4f GetBlendedColor(ThemeColor color) const;
     void GetCursorInfo(NVec2f& pos, NVec2f& size);
 
     void PlaceToolTip(const NVec2f& pos, ToolTipPos location, uint32_t lineGap, const std::shared_ptr<RangeMarker> spMarker);

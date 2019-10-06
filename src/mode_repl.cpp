@@ -34,6 +34,8 @@ void ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t modifiers)
 {
     auto pGlobalMode = GetEditor().GetGlobalMode();
 
+    GetEditor().ResetLastEditTimer();
+
     if (key == 'r' && modifiers == ModifierKey::Ctrl)
     {
         Close();
