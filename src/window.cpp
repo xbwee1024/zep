@@ -1202,25 +1202,28 @@ void ZepWindow::Display()
 
     display.SetClipRect(NRectf{});
 
-    // Airline and underline
-    display.DrawRectFilled(m_airlineRegion->rect, GetBlendedColor(ThemeColor::AirlineBackground));
-
-    auto airHeight = GetEditor().GetDisplay().GetFontHeightPixels();
-    auto border = 12.0f;
-
-    NVec2f screenPosYPx = m_airlineRegion->rect.topLeftPx;
-    for (int i = 0; i < (int)m_airline.leftBoxes.size(); i++)
+    if (!GetEditor().GetCommandText().empty() || (GetEditor().GetConfig().autoHideCommandRegion == false))
     {
-        auto pText = (const utf8*)m_airline.leftBoxes[i].text.c_str();
-        auto textSize = display.GetTextSize(pText, pText + m_airline.leftBoxes[i].text.size());
-        textSize.x += border * 2;
+        // Airline and underline
+        display.DrawRectFilled(m_airlineRegion->rect, GetBlendedColor(ThemeColor::AirlineBackground));
 
-        auto col = m_airline.leftBoxes[i].background;
-        display.DrawRectFilled(NRectf(screenPosYPx, NVec2f(textSize.x + screenPosYPx.x, screenPosYPx.y + airHeight)), col);
+        auto airHeight = GetEditor().GetDisplay().GetFontHeightPixels();
+        auto border = 12.0f;
 
-        NVec4f textCol = m_pBuffer->GetTheme().GetComplement(m_airline.leftBoxes[i].background, IsActiveWindow() ? NVec4f(0.0f) : NVec4f(.5f, .5f, .5f, 0.0f));
-        display.DrawChars(screenPosYPx + NVec2f(border, 0.0f), textCol, (const utf8*)(m_airline.leftBoxes[i].text.c_str()));
-        screenPosYPx.x += textSize.x;
+        NVec2f screenPosYPx = m_airlineRegion->rect.topLeftPx;
+        for (int i = 0; i < (int)m_airline.leftBoxes.size(); i++)
+        {
+            auto pText = (const utf8*)m_airline.leftBoxes[i].text.c_str();
+            auto textSize = display.GetTextSize(pText, pText + m_airline.leftBoxes[i].text.size());
+            textSize.x += border * 2;
+
+            auto col = m_airline.leftBoxes[i].background;
+            display.DrawRectFilled(NRectf(screenPosYPx, NVec2f(textSize.x + screenPosYPx.x, screenPosYPx.y + airHeight)), col);
+
+            NVec4f textCol = m_pBuffer->GetTheme().GetComplement(m_airline.leftBoxes[i].background, IsActiveWindow() ? NVec4f(0.0f) : NVec4f(.5f, .5f, .5f, 0.0f));
+            display.DrawChars(screenPosYPx + NVec2f(border, 0.0f), textCol, (const utf8*)(m_airline.leftBoxes[i].text.c_str()));
+            screenPosYPx.x += textSize.x;
+        }
     }
 }
 

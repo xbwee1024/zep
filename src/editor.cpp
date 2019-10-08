@@ -136,6 +136,7 @@ void ZepEditor::LoadConfig(const ZepPath& config_path)
 
         m_config.showIndicatorRegion = spConfig->get_qualified_as<bool>("editor.show_indicator_region").value_or(true);
         m_config.showLineNumbers = spConfig->get_qualified_as<bool>("editor.show_line_numbers").value_or(true);
+        m_config.autoHideCommandRegion = spConfig->get_qualified_as<bool>("editor.autohide_command_region").value_or(false);
         m_config.backgroundFadeTime = spConfig->get_qualified_as<bool>("editor.background_fade_time").value_or(60.0f);
         m_config.showScrollBar = spConfig->get_qualified_as<uint32_t>("editor.show_scrollbar").value_or(1);
         m_config.lineMarginTop = spConfig->get_qualified_as<uint32_t>("editor.line_margin_top").value_or(1);
@@ -664,6 +665,20 @@ void ZepEditor::Notify(std::shared_ptr<ZepMessage> pMsg)
     }
 }
 
+std::string ZepEditor::GetCommandText() const
+{
+    std::ostringstream str;
+    bool start = true;
+    for (auto& line : m_commandLines)
+    {
+        if (!start)
+            str << "\n";
+        start = false;
+        str << line;
+    }
+    return str.str();
+}
+
 void ZepEditor::SetCommandText(const std::string& strCommand)
 {
     m_commandLines = string_split(strCommand, "\n\r");
@@ -762,7 +777,10 @@ void ZepEditor::Display()
     //GetDisplay().DrawRectFilled(m_editorRegion->rect, GetTheme().GetColor(ThemeColor::Background));
 
     // Background rect for CommandLine
-    m_pDisplay->DrawRectFilled(m_commandRegion->rect, GetTheme().GetColor(ThemeColor::Background));
+    if (!GetCommandText().empty() || (GetConfig().autoHideCommandRegion == false))
+    {
+        m_pDisplay->DrawRectFilled(m_commandRegion->rect, GetTheme().GetColor(ThemeColor::Background));
+    }
 
     // Draw command text
     auto screenPosYPx = m_commandRegion->rect.topLeftPx + NVec2f(0.0f, textBorder);

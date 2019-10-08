@@ -196,6 +196,7 @@ struct EditorConfig
     uint32_t lineMarginBottom = 1;
     bool showLineNumbers = true;
     bool showIndicatorRegion = true;
+    bool autoHideCommandRegion = true;
     float backgroundFadeTime = 60.0f;
 };
 
@@ -275,6 +276,7 @@ public:
 
     void SetCommandText(const std::string& strCommand);
 
+    std::string GetCommandText() const;
     const std::vector<std::string>& GetCommandLines()
     {
         return m_commandLines;
