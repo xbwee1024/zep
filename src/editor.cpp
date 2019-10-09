@@ -774,7 +774,11 @@ void ZepEditor::Display()
     auto commandSpace = commandCount;
     commandSpace = std::max(commandCount, 0l);
 
-    //GetDisplay().DrawRectFilled(m_editorRegion->rect, GetTheme().GetColor(ThemeColor::Background));
+    // This fill will effectively fill the region around the tabs in Normal mode
+    if (GetConfig().style == EditorStyle::Normal)
+    {
+        GetDisplay().DrawRectFilled(m_editorRegion->rect, GetTheme().GetColor(ThemeColor::Background));
+    }
 
     // Background rect for CommandLine
     if (!GetCommandText().empty() || (GetConfig().autoHideCommandRegion == false))
@@ -796,12 +800,18 @@ void ZepEditor::Display()
         screenPosYPx.x = m_commandRegion->rect.topLeftPx.x;
     }
 
+    if (GetConfig().style == EditorStyle::Normal)
+    {
+        // A line along the bottom of the tab region
+        m_pDisplay->DrawRectFilled(
+            NRectf(NVec2f(m_tabRegion->rect.Left(), m_tabRegion->rect.Bottom() - 1), NVec2f(m_tabRegion->rect.Right(), m_tabRegion->rect.Bottom())), GetTheme().GetColor(ThemeColor::TabInactive));
+    }
+
     m_tabRects.clear();
     if (GetTabWindows().size() > 1)
     {
         // Tab region
         // TODO Handle it when tabs are bigger than the available width!
-        m_pDisplay->DrawRectFilled(NRectf(m_tabRegion->rect.BottomLeft() - NVec2f(0.0f, 2.0f), m_tabRegion->rect.bottomRightPx), GetTheme().GetColor(ThemeColor::TabBorder));
         NVec2f currentTab = m_tabRegion->rect.topLeftPx;
         for (auto& window : GetTabWindows())
         {
@@ -810,9 +820,11 @@ void ZepEditor::Display()
             auto tabColor = (window == GetActiveTabWindow()) ? GetTheme().GetColor(ThemeColor::TabActive) : GetTheme().GetColor(ThemeColor::TabInactive);
             auto tabLength = m_pDisplay->GetTextSize((const utf8*)buffer.GetName().c_str()).x + textBorder * 2;
 
+            // Tab background rect
             NRectf tabRect(currentTab, currentTab + NVec2f(tabLength, m_tabRegion->rect.Height()));
             m_pDisplay->DrawRectFilled(tabRect, tabColor);
 
+            // Tab text
             m_pDisplay->DrawChars(currentTab + NVec2f(textBorder, textBorder), NVec4f(1.0f), (const utf8*)buffer.GetName().c_str());
 
             currentTab.x += tabLength + textBorder;
