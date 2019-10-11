@@ -41,7 +41,7 @@ ThemeType ZepTheme::GetThemeType() const
 void ZepTheme::SetDarkTheme()
 {
     m_colors[ThemeColor::Text] = NVec4f(1.0f);
-    m_colors[ThemeColor::Background] = NVec4f(0.1f, 0.1f, 0.1f, 1.0f);
+    m_colors[ThemeColor::Background] = NVec4f(0.13f, 0.13f, 0.13f, 1.0f);
     m_colors[ThemeColor::HiddenText] = NVec4f(.9f, .1f, .1f, 1.0f);
     m_colors[ThemeColor::TabBorder] = NVec4f(.55f, .55f, .55f, 1.0f);
     m_colors[ThemeColor::TabInactive] = NVec4f(.4f, .4f, .4f, .55f);
@@ -51,7 +51,7 @@ void ZepTheme::SetDarkTheme()
     m_colors[ThemeColor::LineNumberActive] = NVec4f(.13f, 1.0f, .13f, 1.0f);
     m_colors[ThemeColor::CursorNormal] = NVec4f(130.0f / 255.0f, 140.0f / 255.0f, 230.0f / 255.0f, 1.0f);
     m_colors[ThemeColor::CursorInsert] = NVec4f(1.0f, 1.0f, 1.0f, .9f);
-    m_colors[ThemeColor::CursorLineBackground] = NVec4f(.15f, .15f, .15f, 1.0f);
+    m_colors[ThemeColor::CursorLineBackground] = NVec4f(.2f, .2f, .2f, 1.0f);
     m_colors[ThemeColor::AirlineBackground] = NVec4f(.15f, .15f, .15f, 1.0f);
     m_colors[ThemeColor::Light] = NVec4f(1.0f);
     m_colors[ThemeColor::Dark] = NVec4f(0.0f, 0.0f, 0.0f, 1.0f);

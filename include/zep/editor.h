@@ -197,6 +197,7 @@ struct EditorConfig
     bool showLineNumbers = true;
     bool showIndicatorRegion = true;
     bool autoHideCommandRegion = true;
+    bool cursorLineSolid = false;
     float backgroundFadeTime = 60.0f;
 };
 
@@ -300,9 +301,9 @@ public:
 
     ZepTheme& GetTheme() const;
 
-    void OnMouseMove(const NVec2f& mousePos);
-    void OnMouseDown(const NVec2f& mousePos, ZepMouseButton button);
-    void OnMouseUp(const NVec2f& mousePos, ZepMouseButton button);
+    bool OnMouseMove(const NVec2f& mousePos);
+    bool OnMouseDown(const NVec2f& mousePos, ZepMouseButton button);
+    bool OnMouseUp(const NVec2f& mousePos, ZepMouseButton button);
     void TickInputState();
     const NVec2f GetMousePos() const;
 

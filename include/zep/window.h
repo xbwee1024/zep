@@ -238,6 +238,8 @@ private:
     bool m_scrollVisibilityChanged = true;
     bool m_cursorMoved = true;
 
+    NVec2f m_visibleLineExtents;            // The pixel extents of all the lines
+
     std::shared_ptr<Scroller> m_vScroller;
     timer m_toolTipTimer;                   // Timer for when the tip is shown
     NVec2f m_mouseHoverPos;                   // Current location for the tip

@@ -425,6 +425,8 @@ void ZepWindow::UpdateVisibleLineRange()
 {
     TIME_SCOPE(UpdateVisibleLineRange);
 
+    m_visibleLineExtents = NVec2f(m_bufferRegion->rect.Width(), 0);
+
     m_visibleLineRange.x = (long)m_windowLines.size();
     m_visibleLineRange.y = 0;
     for (long line = 0; line < long(m_windowLines.size()); line++)
@@ -442,6 +444,9 @@ void ZepWindow::UpdateVisibleLineRange()
 
         m_visibleLineRange.x = std::min(m_visibleLineRange.x, long(line));
         m_visibleLineRange.y = long(line);
+
+        m_visibleLineExtents.x = std::min(windowLine.pixelRenderRange.x, m_visibleLineExtents.x);
+        m_visibleLineExtents.y = std::max(windowLine.pixelRenderRange.y, m_visibleLineExtents.y);
     }
     m_visibleLineRange.y++;
     UpdateScrollers();
@@ -563,8 +568,38 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
 
                     if (IsInsideTextRegion(cursorCL))
                     {
-                        // Cursor line
-                        display.DrawRectFilled(NRectf(NVec2f(m_textRegion->rect.topLeftPx.x, cursorLine.spanYPx - m_bufferOffsetYPx + m_textRegion->rect.topLeftPx.y), NVec2f(m_textRegion->rect.bottomRightPx.x, cursorLine.spanYPx - m_bufferOffsetYPx + m_textRegion->rect.topLeftPx.y + cursorLine.FullLineHeight())), GetBlendedColor(ThemeColor::CursorLineBackground));
+                        float lineSize = 1.0f * GetEditor().GetPixelScale();
+
+                        // Normal mode spans the whole buffer, otherwise we just cover the visible text range
+                        // This is all about making minimal mode as non-invasive as possible.
+                        auto right = GetEditor().GetConfig().style == EditorStyle::Normal ? m_textRegion->rect.bottomRightPx.x : m_visibleLineExtents.y;
+
+                        if (GetEditor().GetConfig().cursorLineSolid)
+                        {
+                            // Cursor line
+                            display.DrawRectFilled(NRectf(NVec2f(m_textRegion->rect.topLeftPx.x, cursorLine.spanYPx - m_bufferOffsetYPx + m_textRegion->rect.topLeftPx.y), NVec2f(right, cursorLine.spanYPx - m_bufferOffsetYPx + m_textRegion->rect.topLeftPx.y + cursorLine.FullLineHeight())), GetBlendedColor(ThemeColor::CursorLineBackground));
+                        }
+                        else
+                        {
+                            // Cursor line
+                            display.DrawRectFilled(
+                                NRectf(
+                                    NVec2f(m_textRegion->rect.Left(), ToWindowY(cursorLine.spanYPx)),
+                                    NVec2f(right, ToWindowY(cursorLine.spanYPx + lineSize))),
+                                GetBlendedColor(ThemeColor::TabInactive));
+
+                            display.DrawRectFilled(
+                                NRectf(
+                                    NVec2f(m_textRegion->rect.Left(), ToWindowY(cursorLine.spanYPx + cursorLine.FullLineHeight() - lineSize)),
+                                    NVec2f(right, ToWindowY(cursorLine.spanYPx + cursorLine.FullLineHeight()))),
+                                GetBlendedColor(ThemeColor::TabInactive));
+
+                            display.DrawRectFilled(
+                                NRectf(
+                                    NVec2f(right, ToWindowY(cursorLine.spanYPx)),
+                                    NVec2f(right + lineSize, ToWindowY(cursorLine.spanYPx + cursorLine.FullLineHeight()))),
+                                GetBlendedColor(ThemeColor::TabInactive));
+                        }
                     }
                 }
             }
@@ -676,7 +711,7 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
                     }
                 }
             }
-            
+
             // Draw the visual selection marker second
             if (IsActiveWindow())
             {
@@ -689,7 +724,6 @@ bool ZepWindow::DisplayLine(SpanInfo& lineInfo, int displayPass)
                     }
                 }
             }
-
         }
         // Second pass, characters
         else

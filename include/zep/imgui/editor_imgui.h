@@ -41,22 +41,38 @@ public:
 
         if (io.MouseClicked[0])
         {
-            OnMouseDown(toNVec2f(io.MousePos), ZepMouseButton::Left);
+            if (OnMouseDown(toNVec2f(io.MousePos), ZepMouseButton::Left))
+            {
+                // Hide the mouse click from imgui if we handled it
+                io.MouseClicked[0] = false;
+            }
         }
 
         if (io.MouseClicked[1])
         {
-            OnMouseDown(toNVec2f(io.MousePos), ZepMouseButton::Right);
+            if (OnMouseDown(toNVec2f(io.MousePos), ZepMouseButton::Right))
+            {
+                // Hide the mouse click from imgui if we handled it
+                io.MouseClicked[0] = false;
+            }
         }
 
         if (io.MouseReleased[0])
         {
-            OnMouseUp(toNVec2f(io.MousePos), ZepMouseButton::Left);
+            if (OnMouseUp(toNVec2f(io.MousePos), ZepMouseButton::Left))
+            {
+                // Hide the mouse click from imgui if we handled it
+                io.MouseClicked[0] = false;
+            }
         }
 
         if (io.MouseReleased[1])
         {
-            OnMouseUp(toNVec2f(io.MousePos), ZepMouseButton::Right);
+            if (OnMouseUp(toNVec2f(io.MousePos), ZepMouseButton::Right))
+            {
+                // Hide the mouse click from imgui if we handled it
+                io.MouseClicked[0] = false;
+            }
         }
 
         if (io.KeyCtrl)

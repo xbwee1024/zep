@@ -3,6 +3,8 @@
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 // (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
 
+#define NOMINMAX
+
 #include "imgui/imgui.h"
 
 #include "imgui/examples/imgui_impl_opengl3.h"
@@ -17,7 +19,6 @@
 #include <tclap/CmdLine.h>
 
 #include "config_app.h"
-
 
 // About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual function pointers to be loaded manually.
 // Helper libraries are often used for this purpose! Here we are supporting a few common ones: gl3w, glew, glad.
@@ -525,19 +526,14 @@ int main(int argc, char** argv)
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
         ImGui::Begin("Zep", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
 
-
         auto min = ImGui::GetCursorScreenPos();
         auto max = ImGui::GetContentRegionAvail();
-        if (max.x <= 0)
-            max.x = 1;
-        if (max.y <= 0)
-            max.y = 1;
-        ImGui::InvisibleButton("ZepContainer", max);
-
+        max.x = std::max(1.0f, max.x);
+        max.y = std::max(1.0f, max.y);
+        
         // Fill the window
         max.x = min.x + max.x;
         max.y = min.y + max.y;
-
         zep.spEditor->SetDisplayRegion(NVec2f(min.x, min.y), NVec2f(max.x, max.y));
 
         // Display the editor inside this window

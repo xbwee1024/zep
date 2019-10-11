@@ -137,6 +137,7 @@ void ZepEditor::LoadConfig(const ZepPath& config_path)
         m_config.showIndicatorRegion = spConfig->get_qualified_as<bool>("editor.show_indicator_region").value_or(true);
         m_config.showLineNumbers = spConfig->get_qualified_as<bool>("editor.show_line_numbers").value_or(true);
         m_config.autoHideCommandRegion = spConfig->get_qualified_as<bool>("editor.autohide_command_region").value_or(false);
+        m_config.cursorLineSolid = spConfig->get_qualified_as<bool>("editor.cursor_line_solid").value_or(false);
         m_config.backgroundFadeTime = spConfig->get_qualified_as<bool>("editor.background_fade_time").value_or(60.0f);
         m_config.showScrollBar = spConfig->get_qualified_as<uint32_t>("editor.show_scrollbar").value_or(1);
         m_config.lineMarginTop = spConfig->get_qualified_as<uint32_t>("editor.line_margin_top").value_or(1);
@@ -844,25 +845,28 @@ ZepTheme& ZepEditor::GetTheme() const
     return *m_spTheme;
 }
 
-void ZepEditor::OnMouseMove(const NVec2f& mousePos)
+bool ZepEditor::OnMouseMove(const NVec2f& mousePos)
 {
     m_mousePos = mousePos;
-    Broadcast(std::make_shared<ZepMessage>(Msg::MouseMove, mousePos));
+    bool handled = Broadcast(std::make_shared<ZepMessage>(Msg::MouseMove, mousePos));
     m_bPendingRefresh = true;
+    return handled;
 }
 
-void ZepEditor::OnMouseDown(const NVec2f& mousePos, ZepMouseButton button)
+bool ZepEditor::OnMouseDown(const NVec2f& mousePos, ZepMouseButton button)
 {
     m_mousePos = mousePos;
-    Broadcast(std::make_shared<ZepMessage>(Msg::MouseDown, mousePos, button));
+    bool handled = Broadcast(std::make_shared<ZepMessage>(Msg::MouseDown, mousePos, button));
     m_bPendingRefresh = true;
+    return handled;
 }
 
-void ZepEditor::OnMouseUp(const NVec2f& mousePos, ZepMouseButton button)
+bool ZepEditor::OnMouseUp(const NVec2f& mousePos, ZepMouseButton button)
 {
     m_mousePos = mousePos;
-    Broadcast(std::make_shared<ZepMessage>(Msg::MouseUp, mousePos, button));
+    bool handled = Broadcast(std::make_shared<ZepMessage>(Msg::MouseUp, mousePos, button));
     m_bPendingRefresh = true;
+    return handled;
 }
 
 const NVec2f ZepEditor::GetMousePos() const
