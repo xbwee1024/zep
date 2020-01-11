@@ -11,7 +11,12 @@
 namespace Zep
 {
 
-std::unordered_map<uint32_t, std::string> StringId::stringLookup;
+std::unordered_map<uint32_t, std::string>& StringId::GetStringLookup()
+{
+    static std::unordered_map<uint32_t, std::string> stringLookup;
+    return stringLookup;
+}
+
 std::string string_tolower(const std::string& str)
 {
     std::string copy = str;
@@ -327,26 +332,26 @@ void string_split_lines(const std::string& text, std::vector<std::string>& split
 StringId::StringId(const char* pszString)
 {
     id = murmur_hash(pszString, (int)strlen(pszString), 0);
-    stringLookup[id] = pszString;
+    StringId::GetStringLookup()[id] = pszString;
 }
 
 StringId::StringId(const std::string& str)
 {
     id = murmur_hash(str.c_str(), (int)str.length(), 0);
-    stringLookup[id] = str;
+    StringId::GetStringLookup()[id] = str;
 }
 
 const StringId& StringId::operator=(const char* pszString)
 {
     id = murmur_hash(pszString, (int)strlen(pszString), 0);
-    stringLookup[id] = pszString;
+    StringId::GetStringLookup()[id] = pszString;
     return *this;
 }
 
 const StringId& StringId::operator=(const std::string& str)
 {
     id = murmur_hash(str.c_str(), (int)str.length(), 0);
-    stringLookup[id] = str;
+    StringId::GetStringLookup()[id] = str;
     return *this;
 }
 

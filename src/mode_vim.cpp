@@ -7,6 +7,7 @@
 #include "zep/tab_window.h"
 #include "zep/theme.h"
 #include "zep/window.h"
+#include "zep/keymap.h"
 
 #include "zep/mcommon/animation/timer.h"
 #include "zep/mcommon/logger.h"
@@ -307,6 +308,24 @@ void ZepMode_Vim::Init()
         GetEditor().SetRegister('0' + (const char)i, "");
     }
     GetEditor().SetRegister('"', "");
+
+    // Setup keymaps
+    // Later, we will be able to read these from a file.
+    // But keymaps are useful for overriding behavior in modes too
+
+    // Normal Mode
+    keymap_add(m_normalMap, "Y", id_YankLine);
+    keymap_add(m_normalMap, "i", id_InsertMode);
+    
+    keymap_add(m_normalMap, "$", id_MotionLineEnd);
+    keymap_add(m_normalMap, "0", id_MotionLineBegin);
+    keymap_add(m_normalMap, "^", id_MotionLineFirstChar);
+   
+    // Visual mode
+    keymap_add(m_visualMap, "viW", id_VisualSelectInnerWORD);
+    keymap_add(m_visualMap, "viw", id_VisualSelectInnerWord);
+
+
 }
 
 void ZepMode_Vim::ResetCommand()
@@ -856,23 +875,38 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
             context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
             return false;
         }
-        else
-        {
-            return true;
-        }
+        return true;
     }
+
+    uint32_t mappedCommand = 0;
+    if (m_currentMode == EditorMode::Visual)
+    {
+        mappedCommand = keymap_find(m_visualMap, "v" + context.command, needMoreChars);
+    }
+    else if (m_currentMode == EditorMode::Normal)
+    {
+        mappedCommand = keymap_find(m_normalMap, context.command, needMoreChars);
+    }
+
+    // Found a valid command, but there are more options to come
+    if (needMoreChars)
+    {
+        context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
+        return false;
+    }
+
     // Motion
-    else if (context.command == "$")
+    if (mappedCommand == id_MotionLineEnd)
     {
         GetCurrentWindow()->SetBufferCursor(context.buffer.GetLinePos(bufferCursor, LineLocation::LineLastNonCR));
         return true;
     }
-    else if (context.command == "0")
+    else if (mappedCommand == id_MotionLineBegin)
     {
         GetCurrentWindow()->SetBufferCursor(context.buffer.GetLinePos(bufferCursor, LineLocation::LineBegin));
         return true;
     }
-    else if (context.command == "^")
+    else if (mappedCommand == id_MotionLineFirstChar)
     {
         GetCurrentWindow()->SetBufferCursor(context.buffer.GetLinePos(bufferCursor, LineLocation::LineFirstGraphChar));
         return true;
@@ -1440,7 +1474,7 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
             return false;
         }
     }
-    else if (context.command == "Y")
+    else if (mappedCommand == id_YankLine)
     {
         // Copy the whole line, including the CR
         context.registers.push('0');
@@ -1456,40 +1490,30 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
     }
     else if (context.command[0] == 'i')
     {
-        if (m_currentMode == EditorMode::Visual)
+        if (mappedCommand == id_VisualSelectInnerWORD)
         {
-            if (context.command.size() < 2)
+            if (GetOperationRange("iW", context.mode, context.beginRange, context.endRange))
             {
-                context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
+                m_visualBegin = context.beginRange;
+                m_visualEnd = context.endRange;
+                GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
+                UpdateVisualSelection();
+                return true;
             }
-            else
+            return true;
+        }
+        else if (mappedCommand == id_VisualSelectInnerWord)
+        {
+            if (GetOperationRange("iw", context.mode, context.beginRange, context.endRange))
             {
-                if (context.command[1] == 'W')
-                {
-                    if (GetOperationRange("iW", context.mode, context.beginRange, context.endRange))
-                    {
-                        m_visualBegin = context.beginRange;
-                        m_visualEnd = context.endRange;
-                        GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
-                        UpdateVisualSelection();
-                        return true;
-                    }
-                    return true;
-                }
-                else if (context.command[1] == 'w')
-                {
-                    if (GetOperationRange("iw", context.mode, context.beginRange, context.endRange))
-                    {
-                        m_visualBegin = context.beginRange;
-                        m_visualEnd = context.endRange;
-                        GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
-                        UpdateVisualSelection();
-                        return true;
-                    }
-                }
+                m_visualBegin = context.beginRange;
+                m_visualEnd = context.endRange;
+                GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
+                UpdateVisualSelection();
+                return true;
             }
         }
-        else
+        else if (mappedCommand == id_InsertMode)
         {
             context.commandResult.modeSwitch = EditorMode::Insert;
             return true;

@@ -2,6 +2,7 @@
 
 #include "mode.h"
 #include "zep/commands.h"
+#include "zep/keymap.h"
 
 class Timer;
 
@@ -101,18 +102,18 @@ public:
     ZepMode_Vim(ZepEditor& editor);
     ~ZepMode_Vim();
 
-    virtual void AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
-    virtual void Begin() override;
-
     static const char* StaticName()
     {
         return "Vim";
     }
-    virtual const char* Name() const override
-    {
-        return StaticName();
-    }
 
+    // Zep Mode
+    virtual void AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
+    virtual void Begin() override;
+    virtual const char* Name() const override { return StaticName(); }
+    virtual void PreDisplay() override;
+
+    // Vim Specific
     const std::string& GetLastCommand() const
     {
         return m_lastCommand;
@@ -122,7 +123,6 @@ public:
         return m_lastCount;
     }
 
-    virtual void PreDisplay() override;
 
 private:
     void ClampCursorForMode();
@@ -149,6 +149,8 @@ private:
 
     BufferLocation m_exCommandStartLocation = 0;
     SearchDirection m_lastSearchDirection = SearchDirection::Forward;
+    KeyMap m_normalMap;
+    KeyMap m_visualMap;
 };
 
 } // namespace Zep

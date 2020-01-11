@@ -112,17 +112,18 @@ struct StringId
         return id < rhs.id;
     }
 
+    operator uint32_t() const { return id; }
     std::string ToString() const
     {
-        auto itr = stringLookup.find(id);
-        if (itr == stringLookup.end())
+        auto itr = GetStringLookup().find(id);
+        if (itr == GetStringLookup().end())
         {
             return "murmur:" + std::to_string(id);
         }
         return itr->second;
     }
 
-    static std::unordered_map<uint32_t, std::string> stringLookup;
+    static std::unordered_map<uint32_t, std::string>& GetStringLookup();
 };
 
 inline std::ostream& operator<<(std::ostream& str, StringId id)
