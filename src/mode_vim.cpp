@@ -2,12 +2,12 @@
 #include <sstream>
 
 #include "zep/buffer.h"
+#include "zep/keymap.h"
 #include "zep/mode_search.h"
 #include "zep/mode_vim.h"
 #include "zep/tab_window.h"
 #include "zep/theme.h"
 #include "zep/window.h"
-#include "zep/keymap.h"
 
 #include "zep/mcommon/animation/timer.h"
 #include "zep/mcommon/logger.h"
@@ -182,8 +182,7 @@ void CommandContext::GetCommandAndCount()
         }
         else
         {
-            while (itr != commandText.end()
-                && std::isgraph(ToASCII(*itr)) && !std::isdigit(ToASCII(*itr)))
+            while (itr != commandText.end() && !std::isdigit(ToASCII(*itr)))
             {
                 command1 += *itr;
                 itr++;
@@ -202,8 +201,8 @@ void CommandContext::GetCommandAndCount()
         }
     }
 
-    while (itr != commandText.end()
-        && (std::isgraph(ToASCII(*itr)) || *itr == ' '))
+    // No more counts, pull out the rest of the command
+    while (itr != commandText.end())
     {
         command2 += *itr;
         itr++;
@@ -313,19 +312,49 @@ void ZepMode_Vim::Init()
     // Later, we will be able to read these from a file.
     // But keymaps are useful for overriding behavior in modes too
 
-    // Normal Mode
-    keymap_add(m_normalMap, "Y", id_YankLine);
-    keymap_add(m_normalMap, "i", id_InsertMode);
-    
-    keymap_add(m_normalMap, "$", id_MotionLineEnd);
-    keymap_add(m_normalMap, "0", id_MotionLineBegin);
-    keymap_add(m_normalMap, "^", id_MotionLineFirstChar);
-   
+    // Normal and Visual
+    keymap_add({ &m_normalMap, &m_visualMap }, { "Y" }, id_YankLine);
+
+    // Motions
+
+    // Line Motions
+    keymap_add({ &m_normalMap, &m_visualMap }, { "$" }, id_MotionLineEnd);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "0" }, id_MotionLineBegin);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "^" }, id_MotionLineFirstChar);
+
+    // Page Motinos
+    keymap_add({ &m_normalMap, &m_visualMap }, { "j", "<Down>" }, id_MotionDown);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "k", "<Up>" }, id_MotionUp);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "l", "<Right>" }, id_MotionRight);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "h", "<Left>", "<Backspace>" }, id_MotionLeft);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-f>", "<PageDown>" }, id_MotionPageForward);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-b>", "<PageUp>" }, id_MotionPageBackward);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-d>" }, id_MotionHalfPageForward);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-u>" }, id_MotionHalfPageBackward);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "G" }, id_MotionGotoLine);
+
+    // Word motions
+    keymap_add({ &m_normalMap, &m_visualMap }, { "w" }, id_MotionWord);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "b" }, id_MotionBackWord);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "W" }, id_MotionWORD);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "B" }, id_MotionBackWORD);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "e" }, id_MotionEndWord);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "E" }, id_MotionEndWORD);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "ge" }, id_MotionBackEndWord);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "gE" }, id_MotionBackEndWORD);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "gg" }, id_MotionGotoBeginning);
+
     // Visual mode
-    keymap_add(m_visualMap, "viW", id_VisualSelectInnerWORD);
-    keymap_add(m_visualMap, "viw", id_VisualSelectInnerWord);
+    keymap_add(m_visualMap, "iW", id_VisualSelectInnerWORD);
+    keymap_add(m_visualMap, "iw", id_VisualSelectInnerWord);
 
+    // Normal mode only
+    keymap_add(m_normalMap, "i", id_InsertMode);
+    keymap_add(m_normalMap, "H", id_PreviousTabWindow);
+    keymap_add(m_normalMap, "L", id_NextTabWindow);
 
+    // Insert Mode
+    keymap_add({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
 }
 
 void ZepMode_Vim::ResetCommand()
@@ -816,7 +845,7 @@ bool ZepMode_Vim::HandleExCommand(std::string strCommand, const char key)
                 static const uint32_t MaxMarkers = 1000;
                 while (numMarkers < MaxMarkers)
                 {
-                    auto found = buffer.Find(start, (utf8*)& searchString[0], (utf8*)& searchString[searchString.length()]);
+                    auto found = buffer.Find(start, (utf8*)&searchString[0], (utf8*)&searchString[searchString.length()]);
                     if (found == InvalidOffset)
                     {
                         break;
@@ -881,11 +910,15 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
     uint32_t mappedCommand = 0;
     if (m_currentMode == EditorMode::Visual)
     {
-        mappedCommand = keymap_find(m_visualMap, "v" + context.command, needMoreChars);
+        mappedCommand = keymap_find(m_visualMap, context.commandWithoutCount, needMoreChars);
     }
     else if (m_currentMode == EditorMode::Normal)
     {
-        mappedCommand = keymap_find(m_normalMap, context.command, needMoreChars);
+        mappedCommand = keymap_find(m_normalMap, context.commandWithoutCount, needMoreChars);
+    }
+    else if (m_currentMode == EditorMode::Insert)
+    {
+        mappedCommand = keymap_find(m_insertMap, context.commandWithoutCount, needMoreChars);
     }
 
     // Found a valid command, but there are more options to come
@@ -912,43 +945,43 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
         return true;
     }
     // Moving between tabs
-    else if (context.command == "H" && (context.modifierKeys & ModifierKey::Shift))
+    else if (mappedCommand == id_PreviousTabWindow)
     {
         GetEditor().PreviousTabWindow();
         return true;
     }
-    else if (context.command == "L" && (context.modifierKeys & ModifierKey::Shift))
+    else if (mappedCommand == id_NextTabWindow)
     {
         GetEditor().NextTabWindow();
         return true;
     }
-    else if (context.command == "j" || context.command == "+" || context.lastKey == ExtKeys::DOWN)
+    else if (mappedCommand == id_MotionDown)
     {
         GetCurrentWindow()->MoveCursorY(context.count);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
-    else if (context.command == "k" || context.command == "-" || context.lastKey == ExtKeys::UP)
+    else if (mappedCommand == id_MotionUp)
     {
         GetCurrentWindow()->MoveCursorY(-context.count);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
-    else if (context.command == "l" || context.lastKey == ExtKeys::RIGHT)
+    else if (mappedCommand == id_MotionRight)
     {
         auto lineEnd = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineLastNonCR);
         GetCurrentWindow()->SetBufferCursor(std::min(context.bufferCursor + context.count, lineEnd));
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
-    else if (context.command == "h" || context.lastKey == ExtKeys::LEFT)
+    else if (mappedCommand == id_MotionLeft)
     {
         auto lineStart = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineBegin);
         GetCurrentWindow()->SetBufferCursor(std::max(context.bufferCursor - context.count, lineStart));
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
-    else if ((context.command == "f" && (context.modifierKeys & ModifierKey::Ctrl)) || context.lastKey == ExtKeys::PAGEDOWN)
+    else if (mappedCommand == id_MotionPageForward)
     {
         // Note: the vim spec says 'visible lines - 2' for a 'page'.
         // We jump the max possible lines, which might hit the end of the text; this matches observed vim behavior
@@ -956,27 +989,27 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
-    else if ((context.command == "d" && (context.modifierKeys & ModifierKey::Ctrl)) || context.lastKey == ExtKeys::PAGEDOWN)
+    else if (mappedCommand == id_MotionHalfPageForward)
     {
         // Note: the vim spec says 'half visible lines' for up/down
         GetCurrentWindow()->MoveCursorY((GetCurrentWindow()->GetNumDisplayedLines() / 2) * context.count);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
-    else if ((context.command == "b" && (context.modifierKeys & ModifierKey::Ctrl)) || context.lastKey == ExtKeys::PAGEUP)
+    else if (mappedCommand == id_MotionPageBackward)
     {
         // Note: the vim spec says 'visible lines - 2' for a 'page'
         GetCurrentWindow()->MoveCursorY(-(GetCurrentWindow()->GetMaxDisplayLines() - 2) * context.count);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
-    else if ((context.command == "u" && (context.modifierKeys & ModifierKey::Ctrl)) || context.lastKey == ExtKeys::PAGEUP)
+    else if (mappedCommand == id_MotionHalfPageBackward)
     {
         GetCurrentWindow()->MoveCursorY(-(GetCurrentWindow()->GetNumDisplayedLines() / 2) * context.count);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
-    else if (context.command == "G")
+    else if (mappedCommand == id_MotionGotoLine)
     {
         if (context.foundCount)
         {
@@ -1001,84 +1034,67 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
         }
         return true;
     }
-    else if (context.lastKey == ExtKeys::BACKSPACE)
+    else if (mappedCommand == id_Backspace)
     {
         auto loc = context.bufferCursor;
 
-        // Insert-mode context.command
-        if (context.mode == EditorMode::Insert)
-        {
-            // In insert mode, we are 'on' the character after the one we want to delete
-            context.beginRange = context.buffer.LocationFromOffsetByChars(loc, -1);
-            context.endRange = context.buffer.LocationFromOffsetByChars(loc, 0);
-            context.op = CommandOperation::Delete;
-        }
-        else
-        {
-            // Normal mode moves over the chars, and wraps
-            GetCurrentWindow()->SetBufferCursor(context.bufferCursor - 1);
-            return true;
-        }
+        // In insert mode, we are 'on' the character after the one we want to delete
+        context.beginRange = context.buffer.LocationFromOffsetByChars(loc, -1);
+        context.endRange = context.buffer.LocationFromOffsetByChars(loc, 0);
+        context.op = CommandOperation::Delete;
     }
-    else if (context.command == "w")
+    else if (mappedCommand == id_MotionWord)
     {
         auto target = context.buffer.WordMotion(context.bufferCursor, SearchType::Word, SearchDirection::Forward);
         GetCurrentWindow()->SetBufferCursor(target);
         return true;
     }
-    else if (context.command == "W")
+    else if (mappedCommand == id_MotionWORD)
     {
         auto target = context.buffer.WordMotion(context.bufferCursor, SearchType::WORD, SearchDirection::Forward);
         GetCurrentWindow()->SetBufferCursor(target);
         return true;
     }
-    else if (context.command == "b")
+    else if (mappedCommand == id_MotionBackWord)
     {
         auto target = context.buffer.WordMotion(context.bufferCursor, SearchType::Word, SearchDirection::Backward);
         GetCurrentWindow()->SetBufferCursor(target);
         return true;
     }
-    else if (context.command == "B")
+    else if (mappedCommand == id_MotionBackWORD)
     {
         auto target = context.buffer.WordMotion(context.bufferCursor, SearchType::WORD, SearchDirection::Backward);
         GetCurrentWindow()->SetBufferCursor(target);
         return true;
     }
-    else if (context.command == "e")
+    else if (mappedCommand == id_MotionEndWord)
     {
         auto target = context.buffer.EndWordMotion(context.bufferCursor, SearchType::Word, SearchDirection::Forward);
         GetCurrentWindow()->SetBufferCursor(target);
         return true;
     }
-    else if (context.command == "E")
+    else if (mappedCommand == id_MotionEndWORD)
     {
         auto target = context.buffer.EndWordMotion(context.bufferCursor, SearchType::WORD, SearchDirection::Forward);
         GetCurrentWindow()->SetBufferCursor(target);
         return true;
     }
-    else if (context.command[0] == 'g')
+    else if (mappedCommand == id_MotionBackEndWord)
     {
-        if (context.command == "g")
-        {
-            context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
-        }
-        else if (context.command == "ge")
-        {
-            auto target = context.buffer.EndWordMotion(context.bufferCursor, SearchType::Word, SearchDirection::Backward);
-            GetCurrentWindow()->SetBufferCursor(target);
-            return true;
-        }
-        else if (context.command == "gE")
-        {
-            auto target = context.buffer.EndWordMotion(context.bufferCursor, SearchType::WORD, SearchDirection::Backward);
-            GetCurrentWindow()->SetBufferCursor(target);
-            return true;
-        }
-        else if (context.command == "gg")
-        {
-            GetCurrentWindow()->SetBufferCursor(BufferLocation{ 0 });
-            return true;
-        }
+        auto target = context.buffer.EndWordMotion(context.bufferCursor, SearchType::Word, SearchDirection::Backward);
+        GetCurrentWindow()->SetBufferCursor(target);
+        return true;
+    }
+    else if (mappedCommand == id_MotionBackEndWORD)
+    {
+        auto target = context.buffer.EndWordMotion(context.bufferCursor, SearchType::WORD, SearchDirection::Backward);
+        GetCurrentWindow()->SetBufferCursor(target);
+        return true;
+    }
+    else if (mappedCommand == id_MotionGotoBeginning)
+    {
+        GetCurrentWindow()->SetBufferCursor(BufferLocation{ 0 });
+        return true;
     }
     else if (context.command == "J")
     {
@@ -1488,34 +1504,31 @@ bool ZepMode_Vim::GetCommand(CommandContext& context)
         Undo();
         return true;
     }
-    else if (context.command[0] == 'i')
+    else if (mappedCommand == id_InsertMode)
     {
-        if (mappedCommand == id_VisualSelectInnerWORD)
+        context.commandResult.modeSwitch = EditorMode::Insert;
+        return true;
+    }
+    else if (mappedCommand == id_VisualSelectInnerWORD)
+    {
+        if (GetOperationRange("iW", context.mode, context.beginRange, context.endRange))
         {
-            if (GetOperationRange("iW", context.mode, context.beginRange, context.endRange))
-            {
-                m_visualBegin = context.beginRange;
-                m_visualEnd = context.endRange;
-                GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
-                UpdateVisualSelection();
-                return true;
-            }
+            m_visualBegin = context.beginRange;
+            m_visualEnd = context.endRange;
+            GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
+            UpdateVisualSelection();
             return true;
         }
-        else if (mappedCommand == id_VisualSelectInnerWord)
+        return true;
+    }
+    else if (mappedCommand == id_VisualSelectInnerWord)
+    {
+        if (GetOperationRange("iw", context.mode, context.beginRange, context.endRange))
         {
-            if (GetOperationRange("iw", context.mode, context.beginRange, context.endRange))
-            {
-                m_visualBegin = context.beginRange;
-                m_visualEnd = context.endRange;
-                GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
-                UpdateVisualSelection();
-                return true;
-            }
-        }
-        else if (mappedCommand == id_InsertMode)
-        {
-            context.commandResult.modeSwitch = EditorMode::Insert;
+            m_visualBegin = context.beginRange;
+            m_visualEnd = context.endRange;
+            GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
+            UpdateVisualSelection();
             return true;
         }
     }
@@ -1772,7 +1785,36 @@ void ZepMode_Vim::AddKeyPress(uint32_t key, uint32_t modifierKeys)
             return;
         }
 
+        bool closeBracket = false;
+        if (modifierKeys & ModifierKey::Ctrl)
+        {
+            m_currentCommand += "<C-";
+            if (modifierKeys & ModifierKey::Shift)
+            {
+                // Add the S- modifier for shift enabled special keys
+                // We want to avoid adding S- to capitalized (and already shifted)
+                // keys
+                if (key < ' ')
+                {
+                    m_currentCommand += "S-";
+                }
+            }
+            closeBracket = true;
+        }
+        else if (modifierKeys & ModifierKey::Shift)
+        {
+            if (key < ' ')
+            {
+                m_currentCommand += "<S-";
+                closeBracket = true;
+            }
+        }
+
         m_currentCommand += char(key);
+        if (closeBracket)
+        {
+            m_currentCommand += ">";
+        }
 
         CommandContext context(m_currentCommand, *this, key, modifierKeys, m_currentMode);
         if (GetCommand(context))
@@ -1961,7 +2003,7 @@ void ZepMode_Vim::HandleInsert(uint32_t key)
             // For example, hitting Backspace
             // There is more work to do here to support keyboard combos in insert mode
             // (not that I can think of ones that I use!)
-            CommandContext context("", *this, key, 0, EditorMode::Insert);
+            CommandContext context(std::string(1, char(key)), *this, key, 0, EditorMode::Insert);
             context.bufferCursor = bufferCursor;
             if (GetCommand(context) && context.commandResult.spCommand)
             {

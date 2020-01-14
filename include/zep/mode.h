@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stack>
 #include "buffer.h"
 #include "display.h"
+#include <stack>
 
 namespace Zep
 {
@@ -18,7 +18,7 @@ struct ExtKeys
 {
     enum Key
     {
-        RETURN = 0,
+        RETURN = 0, // NOTE: Do not change this value
         ESCAPE = 1,
         BACKSPACE = 2,
         LEFT = 3,
@@ -42,9 +42,11 @@ struct ExtKeys
         F9 = 21,
         F10 = 22,
         F11 = 23,
-        F12 = 24
+        F12 = 24,
 
         // Note: No higher than 31
+        LAST = 31,
+        NONE = 32
     };
 };
 
@@ -77,7 +79,7 @@ public:
     virtual void AddKeyPress(uint32_t key, uint32_t modifierKeys = ModifierKey::None) = 0;
     virtual const char* Name() const = 0;
     virtual void Begin() = 0;
-    virtual void Notify(std::shared_ptr<ZepMessage> message) override { }
+    virtual void Notify(std::shared_ptr<ZepMessage> message) override {}
 
     // Keys handled by modes
     virtual void AddCommandText(std::string strText);
@@ -86,7 +88,7 @@ public:
     virtual void SetEditorMode(EditorMode mode);
 
     // ZepComponent
-    virtual void PreDisplay() {};
+    virtual void PreDisplay(){};
 
     // Called when we begin editing in this mode
 

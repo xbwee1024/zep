@@ -151,6 +151,7 @@ private:
     SearchDirection m_lastSearchDirection = SearchDirection::Forward;
     KeyMap m_normalMap;
     KeyMap m_visualMap;
+    KeyMap m_insertMap;
 };
 
 } // namespace Zep
