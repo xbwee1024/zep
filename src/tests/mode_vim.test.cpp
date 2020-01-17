@@ -296,6 +296,8 @@ COMMAND_TEST(join_lines, "one\ntwo", "J", "one two");
 
 COMMAND_TEST(join_lines_skip_ws, "one\n   two", "J", "one two");
 
+COMMAND_TEST(join_visual, "one\ntwo", "vlJ", "one two");
+
 // Insert
 COMMAND_TEST(insert_a_text, "one three", "lllatwo ", "one two three")
 COMMAND_TEST(insert_i_text, "one three", "lllitwo", "onetwo three")

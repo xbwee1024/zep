@@ -18,6 +18,15 @@ DECLARE_COMMANDID(InsertMode)
 DECLARE_COMMANDID(VisualSelectInnerWORD)
 DECLARE_COMMANDID(VisualSelectInnerWord)
 
+DECLARE_COMMANDID(JoinLines)
+DECLARE_COMMANDID(OpenLineBelow)
+DECLARE_COMMANDID(OpenLineAbove)
+
+DECLARE_COMMANDID(Delete)
+
+DECLARE_COMMANDID(VisualMode)
+DECLARE_COMMANDID(VisualLineMode)
+
 DECLARE_COMMANDID(MotionLineEnd)
 DECLARE_COMMANDID(MotionLineBegin)
 DECLARE_COMMANDID(MotionLineFirstChar)
@@ -48,9 +57,9 @@ DECLARE_COMMANDID(MotionGotoLine)
 DECLARE_COMMANDID(PreviousTabWindow)
 DECLARE_COMMANDID(NextTabWindow)
 
+
 // Insert Mode
 DECLARE_COMMANDID(Backspace)
-
 struct CommandNode
 {
     std::string token;

@@ -352,7 +352,7 @@ ZepWindow* ZepEditor::AddOrca()
 
 ZepWindow* ZepEditor::AddTree()
 {
-    auto pTree = GetEmptyBuffer("Tree.tree");
+    auto pTree = GetEmptyBuffer("Tree.tree", FileFlags::Locked | FileFlags::ReadOnly);
     auto pTreeWindow = GetActiveTabWindow()->AddWindow(pTree, nullptr, true);
 
     auto pActiveWindow = GetActiveTabWindow()->GetActiveWindow();

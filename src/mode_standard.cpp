@@ -1,7 +1,4 @@
 #include "zep/mode_standard.h"
-#include "zep/commands.h"
-#include "zep/window.h"
-
 #include "zep/mcommon/string/stringutils.h"
 
 // Note:
@@ -41,6 +38,7 @@ void ZepMode_Standard::Begin()
     SwitchMode(EditorMode::Insert);
 }
 
+/*
 bool ZepMode_Standard::SwitchMode(EditorMode mode)
 {
     assert(mode == EditorMode::Insert || mode == EditorMode::Visual);
@@ -68,12 +66,13 @@ bool ZepMode_Standard::SwitchMode(EditorMode mode)
     }
     return true;
 }
+*/
 
-void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
+std::shared_ptr<CommandContext> ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
 {
-    std::string ch(1, (char)key);
+    auto spContext = ZepMode::AddKeyPress(key, modifierKeys);
 
-    GetEditor().ResetLastEditTimer();
+    std::string ch(1, (char)key);
 
     bool copyRegion = false;
     bool lineWise = false;
@@ -82,14 +81,6 @@ void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
     BufferLocation startOffset = bufferCursor;
     BufferLocation endOffset = buffer.LocationFromOffsetByChars(bufferCursor, long(ch.length()));
 
-    enum class CommandOperation
-    {
-        None,
-        Delete,
-        Insert,
-        Copy,
-        Paste
-    };
     CommandOperation op = CommandOperation::None;
 
     auto normalizeOffsets = [&]() {
@@ -105,7 +96,7 @@ void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
     if (key == ExtKeys::ESCAPE)
     {
         SwitchMode(EditorMode::Insert);
-        return;
+        return spContext;
     }
 
     bool begin_shift = false;
@@ -122,7 +113,8 @@ void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
         case ExtKeys::PAGEUP:
             if (modifierKeys & ModifierKey::Shift)
             {
-                begin_shift = SwitchMode(EditorMode::Visual);
+                begin_shift = (m_currentMode != EditorMode::Visual) ? true : false;
+                SwitchMode(EditorMode::Visual);
             }
             else
             {
@@ -147,7 +139,7 @@ void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
             {
                 keyCache.clear();
             }
-            return;
+            return spContext;
         }
         keyCache.clear();
        
@@ -155,13 +147,13 @@ void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
         if (key == 'z')
         {
             Undo();
-            return;
+            return spContext;
         }
         // Redo
         else if (key == 'y')
         {
             Redo();
-            return;
+            return spContext;
         }
         // Motions fall through to selection code
         else if (key == ExtKeys::RIGHT)
@@ -406,6 +398,8 @@ void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
     {
         buffer.SetSelection(BufferRange{m_visualBegin, m_visualEnd});
     }
+    return spContext;
 }
+
 
 } // namespace Zep

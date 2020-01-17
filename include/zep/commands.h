@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mode.h"
+#include "zep/buffer.h"
 
 namespace Zep
 {

@@ -16,7 +16,7 @@ public:
     ZepMode_Repl(ZepEditor& editor, ZepWindow& launchWindow, ZepWindow& replWindow);
     ~ZepMode_Repl();
 
-    virtual void AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
+    virtual std::shared_ptr<CommandContext> AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
     virtual void Begin() override;
     virtual void Notify(std::shared_ptr<ZepMessage> message) override;
     
