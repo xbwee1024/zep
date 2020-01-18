@@ -375,6 +375,9 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
     // Reset the timer for the last edit, for time-sensitive key strokes
     GetEditor().ResetLastEditTimer();
 
+    // Reset the cursor to keep it visible during typing, and not flashing
+    GetEditor().ResetCursorTimer();
+
     // Reset command text - it may get updated later.
     GetEditor().SetCommandText("");
 
@@ -403,13 +406,9 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
                 m_exCommandStartLocation = GetCurrentWindow()->GetBufferCursor();
                 SwitchMode(EditorMode::Ex);
             }
-    
+
             if (HandleExCommand(m_currentCommand, (const char)key))
             {
-                if (GetCurrentWindow())
-                {
-                    GetEditor().ResetCursorTimer();
-                }
                 SwitchMode(EditorMode::Normal);
                 return nullptr;
             }
@@ -518,165 +517,6 @@ NVec2i ZepMode::GetVisualRange() const
     return NVec2i(m_visualBegin, m_visualEnd);
 }
 
-bool ZepMode::HandleGlobalCommand(const std::string& cmd, uint32_t modifiers, bool& needMoreChars)
-{
-    if (modifiers & ModifierKey::Ctrl)
-    {
-        return HandleGlobalCtrlCommand(cmd, modifiers, needMoreChars);
-    }
-
-    if (cmd[0] == ExtKeys::F8)
-    {
-        auto pWindow = GetCurrentWindow();
-        auto& buffer = pWindow->GetBuffer();
-        auto dir = (modifiers & ModifierKey::Shift) != 0 ? SearchDirection::Backward : SearchDirection::Forward;
-
-        auto pFound = buffer.FindNextMarker(GetCurrentWindow()->GetBufferCursor(), dir, RangeMarkerType::Message);
-        if (pFound)
-        {
-            GetCurrentWindow()->SetBufferCursor(pFound->range.first);
-        }
-        return true;
-    }
-    return false;
-}
-
-bool ZepMode::HandleGlobalCtrlCommand(const std::string& cmd, uint32_t modifiers, bool& needMoreChars)
-{
-    needMoreChars = false;
-
-    // TODO: I prefer 'ko' but I need to put in a keymapper which can see when the user hasn't pressed a second key in a given time
-    // otherwise, this hides 'ctrl+k' for pane navigation!
-    if (cmd[0] == 'i')
-    {
-        if (cmd == "i")
-        {
-            needMoreChars = true;
-        }
-        else if (cmd == "io")
-        {
-            // This is a quick and easy 'alternate file swap'.
-            // It searches a preset list of useful folder targets around the current file.
-            // A better alternative might be a wildcard list of relations, but this works well enough
-            // It also only looks for a file with the same name and different extension!
-            // it is good enough for my current needs...
-            auto& buffer = GetCurrentWindow()->GetBuffer();
-            auto path = buffer.GetFilePath();
-            if (!path.empty() && GetEditor().GetFileSystem().Exists(path))
-            {
-                auto ext = path.extension();
-                auto searchPaths = std::vector<ZepPath>{
-                    path.parent_path(),
-                    path.parent_path().parent_path(),
-                    path.parent_path().parent_path().parent_path()
-                };
-
-                auto ignoreFolders = std::vector<std::string>{ "build", ".git", "obj", "debug", "release" };
-
-                auto priorityFolders = std::vector<std::string>{ "source", "include", "src", "inc", "lib" };
-
-                // Search the paths, starting near and widening
-                for (auto& p : searchPaths)
-                {
-                    if (p.empty())
-                        continue;
-
-                    bool found = false;
-
-                    // Look for the priority folder locations
-                    std::vector<ZepPath> searchFolders{ path.parent_path() };
-                    for (auto& priorityFolder : priorityFolders)
-                    {
-                        GetEditor().GetFileSystem().ScanDirectory(p, [&](const ZepPath& currentPath, bool& recurse) {
-                            recurse = false;
-                            if (GetEditor().GetFileSystem().IsDirectory(currentPath))
-                            {
-                                auto lower = string_tolower(currentPath.filename().string());
-                                if (std::find(ignoreFolders.begin(), ignoreFolders.end(), lower) != ignoreFolders.end())
-                                {
-                                    return true;
-                                }
-
-                                if (priorityFolder == lower)
-                                {
-                                    searchFolders.push_back(currentPath);
-                                }
-                            }
-                            return true;
-                        });
-                    }
-
-                    for (auto& folder : searchFolders)
-                    {
-                        LOG(INFO) << "Searching: " << folder.string();
-
-                        GetEditor().GetFileSystem().ScanDirectory(folder, [&](const ZepPath& currentPath, bool& recurse) {
-                            recurse = true;
-                            if (path.stem() == currentPath.stem() && !(currentPath.extension() == path.extension()))
-                            {
-                                auto load = GetEditor().GetFileBuffer(currentPath, 0, true);
-                                if (load != nullptr)
-                                {
-                                    GetCurrentWindow()->SetBuffer(load);
-                                    found = true;
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-                        if (found)
-                            return true;
-                    }
-                }
-            }
-        }
-        return true;
-    }
-    else if (cmd == "=" || ((cmd == "+") && (modifiers & ModifierKey::Shift)))
-    {
-        GetEditor().GetDisplay().SetFontPointSize(std::min(GetEditor().GetDisplay().GetFontPointSize() + 1.0f, 20.0f));
-        return true;
-    }
-    else if (cmd == "-" || ((cmd == "_") && (modifiers & ModifierKey::Shift)))
-    {
-        GetEditor().GetDisplay().SetFontPointSize(std::max(10.0f, GetEditor().GetDisplay().GetFontPointSize() - 1.0f));
-        return true;
-    }
-    // Moving between splits
-    else if (cmd == "j")
-    {
-        GetCurrentWindow()->GetTabWindow().DoMotion(WindowMotion::Down);
-        return true;
-    }
-    else if (cmd == "k")
-    {
-        GetCurrentWindow()->GetTabWindow().DoMotion(WindowMotion::Up);
-        return true;
-    }
-    else if (cmd == "h")
-    {
-        GetCurrentWindow()->GetTabWindow().DoMotion(WindowMotion::Left);
-        return true;
-    }
-    else if (cmd == "l")
-    {
-        GetCurrentWindow()->GetTabWindow().DoMotion(WindowMotion::Right);
-        return true;
-    }
-    // global search
-    else if (cmd == "p" || cmd == ",")
-    {
-        GetEditor().AddSearch();
-        return true;
-    }
-    else if (cmd == "r")
-    {
-        Redo();
-        return true;
-    }
-    return false;
-}
-
 const std::string& ZepMode::GetLastCommand() const
 {
     return m_lastCommand;
@@ -692,17 +532,7 @@ bool ZepMode::GetCommand(CommandContext& context)
     auto bufferCursor = GetCurrentWindow()->GetBufferCursor();
     auto& buffer = GetCurrentWindow()->GetBuffer();
 
-    // CTRL + keys common to modes
     bool needMoreChars = false;
-    if (HandleGlobalCommand(context.commandText, context.modifierKeys, needMoreChars))
-    {
-        if (needMoreChars)
-        {
-            context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
-            return false;
-        }
-        return true;
-    }
 
     uint32_t mappedCommand = 0;
     if (m_currentMode == EditorMode::Visual)
@@ -725,8 +555,149 @@ bool ZepMode::GetCommand(CommandContext& context)
         return false;
     }
 
-    // Motion
-    if (mappedCommand == id_MotionLineEnd)
+    // Control
+    if (mappedCommand == id_MotionNextMarker)
+    {
+        auto pFound = buffer.FindNextMarker(GetCurrentWindow()->GetBufferCursor(), SearchDirection::Forward, RangeMarkerType::Message);
+        if (pFound)
+        {
+            GetCurrentWindow()->SetBufferCursor(pFound->range.first);
+        }
+        return true;
+    }
+    else if (mappedCommand == id_MotionPreviousMarker)
+    {
+        auto pFound = buffer.FindNextMarker(GetCurrentWindow()->GetBufferCursor(), SearchDirection::Backward, RangeMarkerType::Message);
+        if (pFound)
+        {
+            GetCurrentWindow()->SetBufferCursor(pFound->range.first);
+        }
+        return true;
+    }
+    else if (mappedCommand == id_SwitchToAlternateFile)
+    {
+        // This is a quick and easy 'alternate file swap'.
+        // It searches a preset list of useful folder targets around the current file.
+        // A better alternative might be a wildcard list of relations, but this works well enough
+        // It also only looks for a file with the same name and different extension!
+        // it is good enough for my current needs...
+        auto path = buffer.GetFilePath();
+        if (!path.empty() && GetEditor().GetFileSystem().Exists(path))
+        {
+            auto ext = path.extension();
+            auto searchPaths = std::vector<ZepPath>{
+                path.parent_path(),
+                path.parent_path().parent_path(),
+                path.parent_path().parent_path().parent_path()
+            };
+
+            auto ignoreFolders = std::vector<std::string>{ "build", ".git", "obj", "debug", "release" };
+
+            auto priorityFolders = std::vector<std::string>{ "source", "include", "src", "inc", "lib" };
+
+            // Search the paths, starting near and widening
+            for (auto& p : searchPaths)
+            {
+                if (p.empty())
+                    continue;
+
+                bool found = false;
+
+                // Look for the priority folder locations
+                std::vector<ZepPath> searchFolders{ path.parent_path() };
+                for (auto& priorityFolder : priorityFolders)
+                {
+                    GetEditor().GetFileSystem().ScanDirectory(p, [&](const ZepPath& currentPath, bool& recurse) {
+                        recurse = false;
+                        if (GetEditor().GetFileSystem().IsDirectory(currentPath))
+                        {
+                            auto lower = string_tolower(currentPath.filename().string());
+                            if (std::find(ignoreFolders.begin(), ignoreFolders.end(), lower) != ignoreFolders.end())
+                            {
+                                return true;
+                            }
+
+                            if (priorityFolder == lower)
+                            {
+                                searchFolders.push_back(currentPath);
+                            }
+                        }
+                        return true;
+                    });
+                }
+
+                for (auto& folder : searchFolders)
+                {
+                    LOG(INFO) << "Searching: " << folder.string();
+
+                    GetEditor().GetFileSystem().ScanDirectory(folder, [&](const ZepPath& currentPath, bool& recurse) {
+                        recurse = true;
+                        if (path.stem() == currentPath.stem() && !(currentPath.extension() == path.extension()))
+                        {
+                            auto load = GetEditor().GetFileBuffer(currentPath, 0, true);
+                            if (load != nullptr)
+                            {
+                                GetCurrentWindow()->SetBuffer(load);
+                                found = true;
+                                return false;
+                            }
+                        }
+                        return true;
+                    });
+                    if (found)
+                        return true;
+                }
+            }
+        }
+    }
+    else if (mappedCommand == id_FontBigger)
+    {
+        GetEditor().GetDisplay().SetFontPointSize(std::min(GetEditor().GetDisplay().GetFontPointSize() + 1.0f, 20.0f));
+        return true;
+    }
+    else if (mappedCommand == id_FontSmaller)
+    {
+        GetEditor().GetDisplay().SetFontPointSize(std::max(10.0f, GetEditor().GetDisplay().GetFontPointSize() - 1.0f));
+        return true;
+    }
+    // Moving between splits
+    else if (mappedCommand == id_MotionDownSplit)
+    {
+        GetCurrentWindow()->GetTabWindow().DoMotion(WindowMotion::Down);
+        return true;
+    }
+    else if (mappedCommand == id_MotionUpSplit)
+    {
+        GetCurrentWindow()->GetTabWindow().DoMotion(WindowMotion::Up);
+        return true;
+    }
+    else if (mappedCommand == id_MotionLeftSplit)
+    {
+        GetCurrentWindow()->GetTabWindow().DoMotion(WindowMotion::Left);
+        return true;
+    }
+    else if (mappedCommand == id_MotionRightSplit)
+    {
+        GetCurrentWindow()->GetTabWindow().DoMotion(WindowMotion::Right);
+        return true;
+    }
+    // global search
+    else if (mappedCommand == id_QuickSearch)
+    {
+        GetEditor().AddSearch();
+        return true;
+    }
+    else if (mappedCommand == id_Redo)
+    {
+        Redo();
+        return true;
+    }
+    else if (mappedCommand == id_Undo)
+    {
+        Undo();
+        return true;
+    }
+    else if (mappedCommand == id_MotionLineEnd)
     {
         GetCurrentWindow()->SetBufferCursor(context.buffer.GetLinePos(bufferCursor, LineLocation::LineLastNonCR));
         return true;
@@ -1296,11 +1267,6 @@ bool ZepMode::GetCommand(CommandContext& context)
         context.endRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::BeyondLineEnd);
         context.op = CommandOperation::CopyLines;
         context.commandResult.modeSwitch = EditorMode::Normal;
-    }
-    else if (context.command == "u")
-    {
-        Undo();
-        return true;
     }
     else if (mappedCommand == id_InsertMode)
     {
@@ -1988,6 +1954,5 @@ bool ZepMode::HandleExCommand(std::string strCommand, const char key)
     }
     return false;
 }
-
 
 } // namespace Zep

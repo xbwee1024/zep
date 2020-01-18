@@ -72,6 +72,7 @@ std::shared_ptr<CommandContext> ZepMode_Standard::AddKeyPress(uint32_t key, uint
 {
     auto spContext = ZepMode::AddKeyPress(key, modifierKeys);
 
+    /*
     std::string ch(1, (char)key);
 
     bool copyRegion = false;
@@ -398,6 +399,7 @@ std::shared_ptr<CommandContext> ZepMode_Standard::AddKeyPress(uint32_t key, uint
     {
         buffer.SetSelection(BufferRange{m_visualBegin, m_visualEnd});
     }
+    */
     return spContext;
 }
 

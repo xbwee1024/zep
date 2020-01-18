@@ -181,9 +181,6 @@ public:
 
     virtual NVec2i GetVisualRange() const;
 
-    virtual bool HandleGlobalCtrlCommand(const std::string& cmd, uint32_t modifiers, bool& needMoreChars);
-    virtual bool HandleGlobalCommand(const std::string& cmd, uint32_t modifiers, bool& needMoreChars);
-
     virtual const std::string& GetLastCommand() const;
     virtual bool GetCommand(CommandContext& context);
     virtual void ResetCommand();
@@ -225,6 +222,7 @@ protected:
     BufferLocation m_exCommandStartLocation = 0;
     bool m_pendingEscape = false;
     ModeSettings m_settings;
+    std::string m_textHistory;
 };
 
 } // namespace Zep

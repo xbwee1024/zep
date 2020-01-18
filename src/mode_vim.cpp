@@ -135,6 +135,27 @@ void ZepMode_Vim::Init()
     keymap_add(m_normalMap, "O", id_OpenLineAbove);
     keymap_add(m_normalMap, "V", id_VisualLineMode);
     keymap_add(m_normalMap, "v", id_VisualMode);
+    
+    keymap_add(m_normalMap, "<F8>", id_MotionNextMarker);
+    keymap_add(m_normalMap, "<S-F8>", id_MotionPreviousMarker);
+    
+    keymap_add(m_normalMap, "+", id_FontBigger);
+    keymap_add(m_normalMap, "-", id_FontSmaller);
+
+    keymap_add(m_normalMap, "<C-i><C-o>", id_SwitchToAlternateFile);
+    
+    keymap_add(m_normalMap, "<C-j>", id_MotionDownSplit);
+    keymap_add(m_normalMap, "<C-l>", id_MotionRightSplit);
+    keymap_add(m_normalMap, "<C-k>", id_MotionUpSplit);
+    keymap_add(m_normalMap, "<C-h>", id_MotionLeftSplit);
+    
+    keymap_add({ &m_normalMap }, { "<C-p>", "<C-,>" }, id_QuickSearch);
+    keymap_add({ &m_normalMap }, { "<C-r>", }, id_Redo);
+    keymap_add({ &m_normalMap }, { "<C-z>", "u" }, id_Undo);
+   
+    /* Standard mode
+    keymap_add({ &m_normalMap }, { "<C-y>"}, id_Redo);
+    */
 
     // Insert Mode
     keymap_add({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
@@ -240,6 +261,7 @@ std::shared_ptr<CommandContext> ZepMode_Vim::AddKeyPress(uint32_t key, uint32_t 
         }
         else
         {
+            // If the user has so far typed numbers, then wait for more input
             if (!m_currentCommand.empty() && m_currentCommand.find_first_not_of("0123456789") == std::string::npos)
             {
                 spContext->commandResult.flags |= CommandResultFlags::NeedMoreChars;
@@ -253,11 +275,6 @@ std::shared_ptr<CommandContext> ZepMode_Vim::AddKeyPress(uint32_t key, uint32_t 
             }
         }
 
-        // Make m_bufferCursor visible right after command
-        if (GetCurrentWindow())
-        {
-            GetEditor().ResetCursorTimer();
-        }
     }
     else if (m_currentMode == EditorMode::Insert)
     {
