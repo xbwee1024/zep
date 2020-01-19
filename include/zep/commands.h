@@ -5,14 +5,6 @@
 namespace Zep
 {
 
-namespace CommandFlags
-{
-enum
-{
-    GroupBoundary = (1 << 0),
-};
-}
-
 class ZepCommand
 {
 public:
@@ -30,14 +22,6 @@ public:
     virtual void Redo() = 0;
     virtual void Undo() = 0;
 
-    virtual void SetFlags(uint32_t flags)
-    {
-        m_flags = flags;
-    }
-    virtual uint32_t GetFlags() const
-    {
-        return m_flags;
-    }
     virtual BufferLocation GetCursorAfter() const
     {
         return m_cursorAfter;
@@ -49,9 +33,24 @@ public:
 
 protected:
     ZepBuffer& m_buffer;
-    uint32_t m_flags = 0;
     BufferLocation m_cursorBefore = -1;
     BufferLocation m_cursorAfter = -1;
+};
+
+class ZepCommand_BeginGroup : public ZepCommand
+{
+public:
+    ZepCommand_BeginGroup(ZepBuffer& mode) : ZepCommand(mode) {}
+    virtual void Redo() override {};
+    virtual void Undo() override {};
+};
+
+class ZepCommand_EndGroup : public ZepCommand
+{
+public:
+    ZepCommand_EndGroup(ZepBuffer& mode) : ZepCommand(mode) {}
+    virtual void Redo() override {};
+    virtual void Undo() override {};
 };
 
 class ZepCommand_DeleteRange : public ZepCommand

@@ -15,7 +15,7 @@ class ZepEditor;
 
 struct ModeSettings
 {
-    bool ShowNormalModeKeyStrokes = false;
+    bool ShowNormalModeKeyStrokes = true;
 };
 
 // NOTE: These are input keys mapped to Zep's internal keymapping; they live below 'space'/32
@@ -211,6 +211,7 @@ protected:
     KeyMap m_normalMap;
     KeyMap m_visualMap;
     KeyMap m_insertMap;
+    KeyMap m_exMap;
     
     SearchDirection m_lastFindDirection = SearchDirection::Forward;
     SearchDirection m_lastSearchDirection = SearchDirection::Forward;
