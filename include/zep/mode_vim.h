@@ -30,7 +30,6 @@ public:
     }
 
     // Zep Mode
-    virtual std::shared_ptr<CommandContext> AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
     virtual void Begin() override;
     virtual const char* Name() const override { return StaticName(); }
     virtual void PreDisplay() override;

@@ -410,6 +410,66 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
     auto spContext = std::make_shared<CommandContext>(m_currentCommand, *this, key, modifierKeys, m_currentMode);
     spContext->foundCommand = GetCommand(*spContext);
 
+    // Did we find something to do?
+    if (spContext->foundCommand)
+    {
+        // It's an undoable command  - add it
+        // Note: a command here is something that modifies the text, so it is kind of like an insert
+        if (spContext->commandResult.spCommand)
+        {
+            if (m_currentMode != EditorMode::Insert)
+            {
+                AddCommand(std::make_shared<ZepCommand_BeginGroup>(spContext->buffer));
+            }
+
+            // Do the command
+            AddCommand(spContext->commandResult.spCommand);
+        }
+
+        // If the command can't manage the count, we do it
+        // Maybe all commands should handle the count?  What are the implications of that?  This bit is a bit messy
+        if (!(spContext->commandResult.flags & CommandResultFlags::HandledCount))
+        {
+            for (int i = 1; i < spContext->count; i++)
+            {
+                // May immediate execute and not return a command...
+                // Create a new 'inner' spContext-> for the next command, because we need to re-initialize the command
+                // spContext-> for 'after' what just happened!
+                CommandContext contextInner(m_currentCommand, *this, key, modifierKeys, m_currentMode);
+                if (GetCommand(contextInner) && contextInner.commandResult.spCommand)
+                {
+                    // Actually queue/do command
+                    AddCommand(contextInner.commandResult.spCommand);
+                }
+            }
+        }
+      
+        if (spContext->commandResult.spCommand)
+        {
+            // Back from insert will mean we end the undo group
+            if (spContext->commandResult.modeSwitch != EditorMode::Insert &&
+                spContext->commandResult.modeSwitch != EditorMode::None)
+            {
+                AddCommand(std::make_shared<ZepCommand_EndGroup>(spContext->buffer));
+            }
+        }
+
+        // A mode to switch to after the command is done
+        SwitchMode(spContext->commandResult.modeSwitch);
+
+        // If not in ex mode, wait for a new command
+        // Can this be cleaner?
+        if (m_currentMode != EditorMode::Ex)
+        {
+            ResetCommand();
+        }
+
+        // Motions can update the visual selection
+        UpdateVisualSelection();
+    }
+
+    ClampCursorForMode();
+
     return spContext;
 }
 

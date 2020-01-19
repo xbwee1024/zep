@@ -184,200 +184,6 @@ void ZepMode_Vim::Begin()
     m_pendingEscape = false;
 }
 
-std::shared_ptr<CommandContext> ZepMode_Vim::AddKeyPress(uint32_t key, uint32_t modifierKeys)
-{
-    auto spContext = ZepMode::AddKeyPress(key, modifierKeys);
-    if (!spContext)
-    {
-        return nullptr;
-    }
-
-    // Did we find something to do?
-    if (spContext->foundCommand)
-    {
-        // It's an undoable command  - add it
-        // Note: a command here is something that modifies the text, so it is kind of like an insert
-        if (spContext->commandResult.spCommand)
-        {
-            if (m_currentMode != EditorMode::Insert)
-            {
-                AddCommand(std::make_shared<ZepCommand_BeginGroup>(spContext->buffer));
-            }
-
-            // Do the command
-            AddCommand(spContext->commandResult.spCommand);
-        }
-
-        // If the command can't manage the count, we do it
-        // Maybe all commands should handle the count?  What are the implications of that?  This bit is a bit messy
-        if (!(spContext->commandResult.flags & CommandResultFlags::HandledCount))
-        {
-            for (int i = 1; i < spContext->count; i++)
-            {
-                // May immediate execute and not return a command...
-                // Create a new 'inner' spContext-> for the next command, because we need to re-initialize the command
-                // spContext-> for 'after' what just happened!
-                CommandContext contextInner(m_currentCommand, *this, key, modifierKeys, m_currentMode);
-                if (GetCommand(contextInner) && contextInner.commandResult.spCommand)
-                {
-                    // Actually queue/do command
-                    AddCommand(contextInner.commandResult.spCommand);
-                }
-            }
-        }
-      
-        if (spContext->commandResult.spCommand)
-        {
-            // Back from insert will mean we end the undo group
-            if (spContext->commandResult.modeSwitch != EditorMode::Insert &&
-                spContext->commandResult.modeSwitch != EditorMode::None)
-            {
-                AddCommand(std::make_shared<ZepCommand_EndGroup>(spContext->buffer));
-            }
-        }
-
-        // A mode to switch to after the command is done
-        SwitchMode(spContext->commandResult.modeSwitch);
-
-        // If not in ex mode, wait for a new command
-        // Can this be cleaner?
-        if (m_currentMode != EditorMode::Ex)
-        {
-            ResetCommand();
-        }
-
-        // Motions can update the visual selection
-        UpdateVisualSelection();
-    }
-
-    ClampCursorForMode();
-
-    return spContext;
-}
-
-void ZepMode_Vim::HandleInsert(uint32_t key)
-{
-    key = 5;
-    /*
-    auto bufferCursor = GetCurrentWindow()->GetBufferCursor();
-
-    // Operations outside of inserts will pack up the insert operation
-    // and start a new one
-    bool packCommand = false;
-    switch (key)
-    {
-    case ExtKeys::ESCAPE:
-    case ExtKeys::BACKSPACE:
-    case ExtKeys::DEL:
-    case ExtKeys::RIGHT:
-    case ExtKeys::LEFT:
-    case ExtKeys::UP:
-    case ExtKeys::DOWN:
-    case ExtKeys::PAGEUP:
-    case ExtKeys::PAGEDOWN:
-        packCommand = true;
-        break;
-    default:
-        break;
-    }
-
-    if (m_pendingEscape)
-    {
-        // My custom 'jk' escape option
-        auto canEscape = timer_get_elapsed_seconds(m_insertEscapeTimer) < .25f;
-        if (canEscape && key == 'k')
-        {
-            packCommand = true;
-            key = ExtKeys::ESCAPE;
-        }
-        m_pendingEscape = false;
-    }
-
-    auto& buffer = GetCurrentWindow()->GetBuffer();
-
-    // Escape back to normal mode
-    if (packCommand)
-    {
-        // End location is where we just finished typing
-        auto insertEnd = bufferCursor;
-        if (insertEnd > m_insertBegin)
-        {
-            // Get the string we inserted
-            auto strInserted = std::string(buffer.GetText().begin() + m_insertBegin, buffer.GetText().begin() + insertEnd);
-
-            // Remember the inserted string for repeating the command
-            m_lastInsertString = strInserted;
-
-            auto lineBegin = buffer.GetLinePos(bufferCursor, LineLocation::LineBegin);
-
-            // Temporarily remove it
-            buffer.Delete(m_insertBegin, insertEnd);
-
-            // Generate a command to put it in with undoable state
-            // Leave cusor at the end of the insert, on the last inserted char.
-            // ...but clamp to the line begin, so that a RETURN + ESCAPE lands you at the beginning of the new line
-            auto cursorAfterEscape = std::max(lineBegin, m_insertBegin + BufferLocation(strInserted.length() - 1));
-
-            auto cmd = std::make_shared<ZepCommand_Insert>(buffer, m_insertBegin, strInserted, m_insertBegin, cursorAfterEscape);
-            AddCommand(std::static_pointer_cast<ZepCommand>(cmd));
-        }
-
-        // Finished escaping
-        if (key == ExtKeys::ESCAPE)
-        {
-            // Back to normal mode
-            SwitchMode(EditorMode::Normal);
-        }
-        else
-        {
-            // Any other key here is a command while in insert mode
-            // For example, hitting Backspace
-            // There is more work to do here to support keyboard combos in insert mode
-            // (not that I can think of ones that I use!)
-            CommandContext context(std::string(1, char(key)), *this, key, 0, EditorMode::Insert);
-            context.bufferCursor = bufferCursor;
-            if (GetCommand(context) && context.commandResult.spCommand)
-            {
-                AddCommand(context.commandResult.spCommand);
-            }
-            SwitchMode(EditorMode::Insert);
-        }
-        return;
-    }
-
-    std::string ch(1, (char)key);
-    if (key == ExtKeys::RETURN)
-    {
-        ch = "\n";
-    }
-    else if (key == ExtKeys::TAB)
-    {
-        // 4 Spaces, obviously :)
-        ch = "    ";
-    }
-
-    if (key == 'j' && !m_pendingEscape)
-    {
-        timer_restart(m_insertEscapeTimer);
-        m_pendingEscape = true;
-    }
-    else
-    {
-        // If we thought it was an escape but it wasn't, put the 'j' back in!
-        if (m_pendingEscape)
-        {
-            ch = "j" + ch;
-        }
-        m_pendingEscape = false;
-
-        buffer.Insert(bufferCursor, ch);
-
-        // Insert back to normal mode should put the m_bufferCursor on top of the last character typed.
-        GetCurrentWindow()->SetBufferCursor(bufferCursor + long(ch.size()));
-    }
-    */
-}
-
 void ZepMode_Vim::PreDisplay()
 {
 
@@ -493,5 +299,36 @@ void ZepMode_Vim::PreDisplay()
                 }
             }
         }
+    }
+    if (m_pendingEscape)
+    {
+        // My custom 'jk' escape option
+        auto canEscape = timer_get_elapsed_seconds(m_insertEscapeTimer) < .25f;
+        if (canEscape && key == 'k')
+        {
+            packCommand = true;
+            key = ExtKeys::ESCAPE;
+        }
+        m_pendingEscape = false;
+    }
+    
+   ... later if (key == 'j' && !m_pendingEscape)
+    {
+        timer_restart(m_insertEscapeTimer);
+        m_pendingEscape = true;
+    }
+    else
+    {
+        // If we thought it was an escape but it wasn't, put the 'j' back in!
+        if (m_pendingEscape)
+        {
+            ch = "j" + ch;
+        }
+        m_pendingEscape = false;
+
+        buffer.Insert(bufferCursor, ch);
+
+        // Insert back to normal mode should put the m_bufferCursor on top of the last character typed.
+        GetCurrentWindow()->SetBufferCursor(bufferCursor + long(ch.size()));
     }
     */

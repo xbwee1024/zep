@@ -158,7 +158,7 @@ public:
     ZepMode(ZepEditor& editor);
     virtual ~ZepMode();
 
-    virtual std::shared_ptr<CommandContext> AddKeyPress(uint32_t key, uint32_t modifierKeys = ModifierKey::None) = 0;
+    virtual std::shared_ptr<CommandContext> AddKeyPress(uint32_t key, uint32_t modifierKeys = ModifierKey::None);
     virtual const char* Name() const = 0;
     virtual void Begin() = 0;
     virtual void Notify(std::shared_ptr<ZepMessage> message) override {}
