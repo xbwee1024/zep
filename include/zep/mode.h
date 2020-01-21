@@ -106,9 +106,10 @@ struct CommandResult
     std::shared_ptr<ZepCommand> spCommand;
 };
 
-struct CommandContext
+class CommandContext
 {
-    CommandContext(const std::string& commandIn, ZepMode& md, uint32_t lastK, uint32_t modifierK, EditorMode editorMode);
+public:
+    CommandContext(const std::string& commandIn, ZepMode& md, EditorMode editorMode);
 
     // Parse the command into:
     // [count1] opA [count2] opB
@@ -119,11 +120,8 @@ struct CommandContext
 
     ZepMode& owner;
 
-    std::string commandText;
-    std::string commandWithoutCount;
     std::string command;
 
-    const SpanInfo* pLineInfo = nullptr;
     ReplaceRangeMode replaceRangeMode = ReplaceRangeMode::Fill;
     BufferLocation beginRange{-1};
     BufferLocation endRange{-1};
@@ -139,8 +137,6 @@ struct CommandContext
     const Register* pRegister = nullptr;
 
     // Input State
-    uint32_t lastKey = 0;
-    uint32_t modifierKeys = 0;
     EditorMode mode = EditorMode::None;
     int count = 1;
     bool foundCount = false;
@@ -151,6 +147,11 @@ struct CommandContext
 
     // Did we get a command?
     bool foundCommand = false;
+   
+    std::string fullCommand;        // The supplied command without stripping
+
+private:
+    std::string commandWithoutCount;// The command with count stripped
 };
 class ZepMode : public ZepComponent
 {
@@ -158,10 +159,13 @@ public:
     ZepMode(ZepEditor& editor);
     virtual ~ZepMode();
 
-    virtual std::shared_ptr<CommandContext> AddKeyPress(uint32_t key, uint32_t modifierKeys = ModifierKey::None);
+    virtual void AddKeyPress(uint32_t key, uint32_t modifierKeys = ModifierKey::None);
     virtual const char* Name() const = 0;
     virtual void Begin() = 0;
     virtual void Notify(std::shared_ptr<ZepMessage> message) override {}
+
+    // Do the actual input handling
+    virtual void HandleMappedInput(const std::string& input);
 
     // Keys handled by modes
     virtual void AddCommandText(std::string strText);
@@ -184,16 +188,16 @@ public:
     virtual const std::string& GetLastCommand() const;
     virtual bool GetCommand(CommandContext& context);
     virtual void ResetCommand();
-    virtual int GetLastCount() const;
 
     virtual bool GetOperationRange(const std::string& op, EditorMode mode, BufferLocation& beginRange, BufferLocation& endRange) const;
 
     virtual void UpdateVisualSelection();
 
+
 protected:
     virtual void SwitchMode(EditorMode mode);
     virtual void ClampCursorForMode();
-    virtual bool HandleExCommand(std::string strCommand, const char key);
+    virtual bool HandleExCommand(std::string strCommand);
     virtual std::string ConvertInputToMapString(uint32_t key, uint32_t modifierKeys);
 
 protected:
@@ -201,17 +205,14 @@ protected:
     std::stack<std::shared_ptr<ZepCommand>> m_redoStack;
     EditorMode m_currentMode = EditorMode::Normal;
     bool m_lineWise = false;
-    BufferLocation m_insertBegin = 0;
     BufferLocation m_visualBegin = 0;
     BufferLocation m_visualEnd = 0;
     std::string m_lastCommand;
-    int m_lastCount;
 
     // Keyboard mappings
     KeyMap m_normalMap;
     KeyMap m_visualMap;
     KeyMap m_insertMap;
-    KeyMap m_exMap;
     
     SearchDirection m_lastFindDirection = SearchDirection::Forward;
     SearchDirection m_lastSearchDirection = SearchDirection::Forward;
@@ -223,7 +224,6 @@ protected:
     BufferLocation m_exCommandStartLocation = 0;
     bool m_pendingEscape = false;
     ModeSettings m_settings;
-    std::string m_textHistory;
 };
 
 } // namespace Zep

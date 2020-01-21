@@ -387,6 +387,7 @@ CURSOR_TEST(motion_kup_limit, "one\ntwo", "kkkkkkkk", 0, 0);
 CURSOR_TEST(motion_jdown_limit, "one\ntwo", "jjjjjjjjj", 0, 1);
 CURSOR_TEST(motion_jklh_find_center, "one\ntwo\nthree", "jjlk", 1, 1);
 CURSOR_TEST(motion_goto_endline, "one two", "$", 6, 0);
+CURSOR_TEST(motion_find_jumpto, "one two", "/two\n", 4, 0);
 CURSOR_TEST(motion_G_goto_enddoc, "one\ntwo", "G", 0, 1);
 CURSOR_TEST(motion_3G, "one\ntwo\nthree\nfour\n", "3G", 0, 2); // Note: Goto line3, offset 2!
 CURSOR_TEST(motion_0G, "one\ntwo\nthree\nfour\n", "0G", 0, 4); // Note: 0 means go to last line

@@ -30,7 +30,7 @@ void ZepMode_Repl::Close()
     GetEditor().RemoveBuffer(&m_replWindow.GetBuffer());
 }
 
-std::shared_ptr<CommandContext> ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t modifiers)
+void ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t modifiers)
 {
     auto pGlobalMode = GetEditor().GetGlobalMode();
 
@@ -39,7 +39,7 @@ std::shared_ptr<CommandContext> ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t
     if (key == 'r' && modifiers == ModifierKey::Ctrl)
     {
         Close();
-        return nullptr;
+        return;
     }
 
     // If not in insert mode, then let the normal mode do its thing
@@ -54,7 +54,7 @@ std::shared_ptr<CommandContext> ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t
             m_replWindow.SetBufferCursor(MaxCursorMove);
             m_replWindow.SetCursorType(CursorType::Insert);
         }
-        return nullptr;
+        return;
     }
   
     // Set the cursor to the end of the buffer while inserting text
@@ -68,7 +68,7 @@ std::shared_ptr<CommandContext> ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t
         GetEditor().GetGlobalMode()->Begin();
         GetEditor().GetGlobalMode()->SetEditorMode(EditorMode::Normal);
         m_currentMode = Zep::EditorMode::Normal;
-        return nullptr;
+        return;
     } 
     else if (key == ExtKeys::RETURN)
     {
@@ -116,7 +116,7 @@ std::shared_ptr<CommandContext> ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t
                 {
                     buffer.Delete(buffer.EndLocation() - 1, buffer.EndLocation());
                     m_replWindow.SetBufferCursor(MaxCursorMove);
-                    return nullptr;
+                    return;
                 }
                    
                 // New line continuation symbol
@@ -131,7 +131,7 @@ std::shared_ptr<CommandContext> ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t
                     }
                 }
                 m_replWindow.SetBufferCursor(MaxCursorMove);
-                return nullptr;
+                return;
             }
             ret = m_pRepl->fnParser(str);
         }
@@ -147,7 +147,7 @@ std::shared_ptr<CommandContext> ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t
         }
 
         BeginInput();
-        return nullptr;
+        return;
     }
     else if (key == ExtKeys::BACKSPACE)
     {
@@ -168,7 +168,7 @@ std::shared_ptr<CommandContext> ZepMode_Repl::AddKeyPress(uint32_t key, uint32_t
     // Ensure cursor is at buffer end
     m_replWindow.SetBufferCursor(MaxCursorMove);
     
-    return nullptr;
+    return;
 }
 
 void ZepMode_Repl::BeginInput()

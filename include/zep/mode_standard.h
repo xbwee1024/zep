@@ -11,7 +11,7 @@ public:
     ZepMode_Standard(ZepEditor& editor);
     ~ZepMode_Standard();
 
-    virtual std::shared_ptr<CommandContext> AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
+    virtual void AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
     virtual void Begin() override;
 
     static const char* StaticName()

@@ -15,7 +15,7 @@ public:
     ZepMode_Search(ZepEditor& editor, ZepWindow& previousWindow, ZepWindow& window, const ZepPath& startPath);
     ~ZepMode_Search();
 
-    virtual std::shared_ptr<CommandContext> AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
+    virtual void AddKeyPress(uint32_t key, uint32_t modifiers = 0) override;
     virtual void Begin() override;
     virtual void Notify(std::shared_ptr<ZepMessage> message) override;
     

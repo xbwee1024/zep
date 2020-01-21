@@ -8,14 +8,12 @@
 
 namespace Zep
 {
-CommandContext::CommandContext(const std::string& commandIn, ZepMode& md, uint32_t lastK, uint32_t modifierK, EditorMode editorMode)
+CommandContext::CommandContext(const std::string& commandIn, ZepMode& md, EditorMode editorMode)
     : owner(md)
-    , commandText(commandIn)
+    , fullCommand(commandIn)
     , buffer(md.GetCurrentWindow()->GetBuffer())
     , bufferCursor(md.GetCurrentWindow()->GetBufferCursor())
     , tempReg("", false)
-    , lastKey(lastK)
-    , modifierKeys(modifierK)
     , mode(editorMode)
 {
     registers.push('"');
@@ -98,8 +96,8 @@ void CommandContext::GetCommandAndCount()
     std::string count2;
     std::string command2;
 
-    auto itr = commandText.begin();
-    while (itr != commandText.end() && std::isdigit((unsigned char)*itr))
+    auto itr = fullCommand.begin();
+    while (itr != fullCommand.end() && std::isdigit((unsigned char)*itr))
     {
         count1 += *itr;
         itr++;
@@ -109,11 +107,11 @@ void CommandContext::GetCommandAndCount()
     // But 2f3 is 'find the second 3'....
     // Same thing for 'r'
     // I need a key mapper with input patterns to sort this out properly
-    if (itr != commandText.end())
+    if (itr != fullCommand.end())
     {
         if (*itr == 'f' || *itr == 'F' || *itr == 'c' || *itr == 'r')
         {
-            while (itr != commandText.end()
+            while (itr != fullCommand.end()
                 && std::isgraph(ToASCII(*itr)))
             {
                 command1 += *itr;
@@ -122,7 +120,7 @@ void CommandContext::GetCommandAndCount()
         }
         else
         {
-            while (itr != commandText.end() && !std::isdigit(ToASCII(*itr)))
+            while (itr != fullCommand.end() && !std::isdigit(ToASCII(*itr)))
             {
                 command1 += *itr;
                 itr++;
@@ -133,7 +131,7 @@ void CommandContext::GetCommandAndCount()
     // If not a register target, then another count
     if (command1[0] != '\"' && command1[0] != ':' && command1[0] != '/' && command1[0] != '?')
     {
-        while (itr != commandText.end()
+        while (itr != fullCommand.end()
             && std::isdigit(ToASCII(*itr)))
         {
             count2 += *itr;
@@ -142,7 +140,7 @@ void CommandContext::GetCommandAndCount()
     }
 
     // No more counts, pull out the rest of the command
-    while (itr != commandText.end())
+    while (itr != fullCommand.end())
     {
         command2 += *itr;
         itr++;
@@ -180,13 +178,6 @@ void CommandContext::GetCommandAndCount()
     {
         count = 1;
         commandWithoutCount = "0";
-    }
-
-    // The dot command is like the 'last' command that succeeded
-    if (commandWithoutCount == ".")
-    {
-        commandWithoutCount = owner.GetLastCommand();
-        count = foundCount ? count : owner.GetLastCount();
     }
 }
 
@@ -229,6 +220,7 @@ void CommandContext::GetCommandRegisters()
         command = commandWithoutCount;
     }
 }
+
 ZepMode::ZepMode(ZepEditor& editor)
     : ZepComponent(editor)
 {
@@ -282,7 +274,14 @@ void ZepMode::SwitchMode(EditorMode mode)
     if (mode == EditorMode::None)
         return;
 
-    if (mode == EditorMode::Insert && GetCurrentWindow() && GetCurrentWindow()->GetBuffer().TestFlags(FileFlags::ReadOnly))
+    if (mode == m_currentMode)
+        return;
+
+    auto pWindow = GetCurrentWindow();
+    auto& buffer = pWindow->GetBuffer();
+    auto cursor = pWindow->GetBufferCursor();
+
+    if (mode == EditorMode::Insert && buffer.TestFlags(FileFlags::ReadOnly))
     {
         mode = EditorMode::Normal;
     }
@@ -290,12 +289,23 @@ void ZepMode::SwitchMode(EditorMode mode)
     // When leaving Ex mode, reset search markers
     if (m_currentMode == EditorMode::Ex)
     {
-        GetCurrentWindow()->GetBuffer().HideMarkers(RangeMarkerType::Search);
+        buffer.HideMarkers(RangeMarkerType::Search);
 
         // Bailed out of ex mode; reset the start location
-        if (mode != EditorMode::Ex)
+        /*if (mode != EditorMode::Ex)
         {
-            GetCurrentWindow()->SetBufferCursor(m_exCommandStartLocation);
+            pWindow->SetBufferCursor(m_exCommandStartLocation);
+        }
+        */
+    }
+    else if (m_currentMode == EditorMode::Insert)
+    {
+        // When switching back to normal mode, put the cursor on the last character typed
+        if (mode == EditorMode::Normal)
+        {
+            // Move back, but not to the previous line
+            auto lineStart = buffer.GetLinePos(cursor, LineLocation::LineBegin);
+            GetCurrentWindow()->SetBufferCursor(std::max(cursor - 1, lineStart));
         }
     }
 
@@ -305,30 +315,29 @@ void ZepMode::SwitchMode(EditorMode mode)
     {
     case EditorMode::Normal:
     {
-        GetCurrentWindow()->SetCursorType(CursorType::Normal);
-        GetCurrentWindow()->GetBuffer().ClearSelection();
+        pWindow->SetCursorType(CursorType::Normal);
+        buffer.ClearSelection();
         ClampCursorForMode();
         ResetCommand();
     }
     break;
     case EditorMode::Insert:
-        m_insertBegin = GetCurrentWindow()->GetBufferCursor();
-        GetCurrentWindow()->SetCursorType(CursorType::Insert);
-        GetCurrentWindow()->GetBuffer().ClearSelection();
+        pWindow->SetCursorType(CursorType::Insert);
+        buffer.ClearSelection();
         ResetCommand();
         m_pendingEscape = false;
         break;
     case EditorMode::Visual:
     {
-        GetCurrentWindow()->SetCursorType(CursorType::Visual);
+        pWindow->SetCursorType(CursorType::Visual);
         ResetCommand();
         m_pendingEscape = false;
     }
     break;
     case EditorMode::Ex:
     {
-        m_exCommandStartLocation = GetCurrentWindow()->GetBufferCursor();
-        GetCurrentWindow()->SetCursorType(CursorType::Hidden);
+        m_exCommandStartLocation = cursor;
+        pWindow->SetCursorType(CursorType::Hidden);
         m_pendingEscape = false;
     }
     break;
@@ -375,12 +384,42 @@ std::string ZepMode::ConvertInputToMapString(uint32_t key, uint32_t modifierKeys
 }
 
 // Handle a key press, convert it to an input command and context, and return it.
-std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modifierKeys)
+void ZepMode::AddKeyPress(uint32_t key, uint32_t modifierKeys)
 {
     if (!GetCurrentWindow())
     {
-        return nullptr;
+        return;
     }
+
+    // Get the new command by parsing out the keys
+    // We convert CTRL + f to a string: "<C-f>"
+    HandleMappedInput(ConvertInputToMapString(key, modifierKeys));
+}
+
+void ZepMode::HandleMappedInput(const std::string& input)
+{
+    if (input.empty())
+    {
+        return;
+    }
+
+    // Special case, dot command (do last edit again)
+    if (m_currentMode == EditorMode::Normal &&
+        input[input.size() - 1] == '.')
+    {
+        auto lastCommand = m_lastCommand;
+        for (auto& last : lastCommand)
+        {
+            HandleMappedInput(std::string(1, last));
+        }
+        m_lastCommand = lastCommand;
+        
+        SwitchMode(EditorMode::Normal);
+
+        return;
+    }
+
+    m_currentCommand += input;
 
     // Reset the timer for the last edit, for time-sensitive key strokes
     GetEditor().ResetLastEditTimer();
@@ -391,14 +430,9 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
     // Reset command text - it may get updated later.
     GetEditor().SetCommandText("");
 
-    // Escape Nukes the current command - we handle it in the keyboard mappings after that
-    if (key == ExtKeys::ESCAPE)
-    {
-        m_currentCommand.clear();
-    }
-
-    // Get the new command by parsing out the keys
-    m_currentCommand += ConvertInputToMapString(key, modifierKeys);
+    // Make the new command
+    auto spContext = std::make_shared<CommandContext>(m_currentCommand, *this, m_currentMode);
+    spContext->foundCommand = GetCommand(*spContext);
 
     // Ex mode, or show chars mode
     if (m_currentMode == EditorMode::Ex || m_settings.ShowNormalModeKeyStrokes)
@@ -406,9 +440,12 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
         GetEditor().SetCommandText(m_currentCommand);
     }
 
-    // Make the new command
-    auto spContext = std::make_shared<CommandContext>(m_currentCommand, *this, key, modifierKeys, m_currentMode);
-    spContext->foundCommand = GetCommand(*spContext);
+    // Escape Nukes the current command - we handle it in the keyboard mappings after that
+    // TODO: This feels awkward
+    if (input[input.size() - 1] == ExtKeys::ESCAPE)
+    {
+        m_currentCommand.clear();
+    }
 
     // Did we find something to do?
     if (spContext->foundCommand)
@@ -417,14 +454,25 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
         // Note: a command here is something that modifies the text, so it is kind of like an insert
         if (spContext->commandResult.spCommand)
         {
+            // If not in insert mode, begin the group
             if (m_currentMode != EditorMode::Insert)
             {
                 AddCommand(std::make_shared<ZepCommand_BeginGroup>(spContext->buffer));
+                m_lastCommand = m_currentCommand;
+            }
+            else
+            {
+                // In insert mode k
+                m_lastCommand += input;
             }
 
             // Do the command
             AddCommand(spContext->commandResult.spCommand);
         }
+        /*else if (m_currentMode == EditorMode::Insert)
+        {
+            m_lastCommand += input;
+        }*/
 
         // If the command can't manage the count, we do it
         // Maybe all commands should handle the count?  What are the implications of that?  This bit is a bit messy
@@ -435,7 +483,7 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
                 // May immediate execute and not return a command...
                 // Create a new 'inner' spContext-> for the next command, because we need to re-initialize the command
                 // spContext-> for 'after' what just happened!
-                CommandContext contextInner(m_currentCommand, *this, key, modifierKeys, m_currentMode);
+                CommandContext contextInner(m_currentCommand, *this, m_currentMode);
                 if (GetCommand(contextInner) && contextInner.commandResult.spCommand)
                 {
                     // Actually queue/do command
@@ -443,12 +491,11 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
                 }
             }
         }
-      
+
         if (spContext->commandResult.spCommand)
         {
             // Back from insert will mean we end the undo group
-            if (spContext->commandResult.modeSwitch != EditorMode::Insert &&
-                spContext->commandResult.modeSwitch != EditorMode::None)
+            if (spContext->commandResult.modeSwitch != EditorMode::Insert && spContext->commandResult.modeSwitch != EditorMode::None)
             {
                 AddCommand(std::make_shared<ZepCommand_EndGroup>(spContext->buffer));
             }
@@ -467,10 +514,24 @@ std::shared_ptr<CommandContext> ZepMode::AddKeyPress(uint32_t key, uint32_t modi
         // Motions can update the visual selection
         UpdateVisualSelection();
     }
-
+    else
+    {
+        // If not found, and there was no request for more characters, and we aren't in Ex mode
+        // Reset the current command
+        // TODO: Clean up these 'is command finished or not' complications.
+        // Perhaps by having a regex for every command: <?count>d<?count>d.  Otherwise there is no easy way to ensure
+        // a command is not 'finished'.  The user can always escape/return of course, but it's neater if invalid
+        // commands are ignored, as we mostly do.  To add a regex, the keymapper would have to build a tree and 'capture'
+        // relevent information, for example for 'f<?graph>' you would capture the char to find
+        if ((spContext->commandResult.flags & CommandResultFlags::NeedMoreChars) == 0)
+        {
+            if (m_currentMode != EditorMode::Ex && spContext->command[0] != '"')
+            {
+                ResetCommand();
+            }
+        }
+    }
     ClampCursorForMode();
-
-    return spContext;
 }
 
 void ZepMode::AddCommand(std::shared_ptr<ZepCommand> spCmd)
@@ -549,11 +610,6 @@ const std::string& ZepMode::GetLastCommand() const
     return m_lastCommand;
 }
 
-int ZepMode::GetLastCount() const
-{
-    return m_lastCount;
-}
-
 bool ZepMode::GetCommand(CommandContext& context)
 {
     auto bufferCursor = GetCurrentWindow()->GetBufferCursor();
@@ -564,29 +620,34 @@ bool ZepMode::GetCommand(CommandContext& context)
     uint32_t mappedCommand = 0;
     if (m_currentMode == EditorMode::Visual)
     {
-        mappedCommand = keymap_find(m_visualMap, context.commandWithoutCount, needMoreChars);
+        mappedCommand = keymap_find(m_visualMap, context.command, needMoreChars);
     }
     else if (m_currentMode == EditorMode::Normal)
     {
-        mappedCommand = keymap_find(m_normalMap, context.commandWithoutCount, needMoreChars);
+        mappedCommand = keymap_find(m_normalMap, context.command, needMoreChars);
     }
     else if (m_currentMode == EditorMode::Insert)
     {
-        mappedCommand = keymap_find(m_insertMap, context.commandWithoutCount, needMoreChars);
+        mappedCommand = keymap_find(m_insertMap, context.command, needMoreChars);
     }
     else if (m_currentMode == EditorMode::Ex)
     {
-        mappedCommand = keymap_find(m_exMap, context.commandWithoutCount, needMoreChars);
-        if (mappedCommand == 0)
+        // TODO: Is it possible extend our key mapping to better process ex commands?  Or are these
+        // too specialized?
+        if (HandleExCommand(context.command))
         {
-            // TODO: Is it possible extend our key mapping to better process ex commands?  Or are these
-            // too specialized?
-            if (HandleExCommand(context.commandWithoutCount, (char)context.lastKey))
-            {
-                SwitchMode(EditorMode::Normal);
-                return true;
-            }
+            SwitchMode(EditorMode::Normal);
+            ResetCommand();
+            return true;
         }
+        return false;
+    }
+
+    // Didn't find an immediate match, found a count and there is no other part to the command
+    if (context.mode == EditorMode::Normal &&
+        mappedCommand == 0 && context.foundCount && context.command.empty())
+    {
+        needMoreChars = true;
     }
 
     // Found a valid command, but there are more options to come
@@ -605,24 +666,6 @@ bool ZepMode::GetCommand(CommandContext& context)
     {
         context.commandResult.modeSwitch = EditorMode::Ex;
         return true;
-    }
-    else if (mappedCommand == id_ExBackspace)
-    {
-        if (!m_currentCommand.empty())
-        {
-            m_currentCommand.pop_back();
-        }
-
-        if (m_currentCommand.empty())
-        {
-            GetEditor().GetActiveTabWindow()->GetActiveWindow()->SetBufferCursor(m_exCommandStartLocation);
-        }
-        return true;
-        /*if (std::isgraph(ToASCII(key)) || std::isblank(ToASCII(key)))
-        {
-            m_currentCommand += char(key);
-        }
-        */
     }
     /*
     else if (mappedCommand == id_Execute)
@@ -1478,7 +1521,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             return true;
         }
-        else if (context.lastKey == ExtKeys::RETURN)
+        else if (context.command[0] == ExtKeys::RETURN)
         {
             if (context.mode == EditorMode::Normal)
             {
@@ -1496,12 +1539,12 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
     else if (m_currentMode == EditorMode::Insert)
     {
-        std::string strText = context.commandText;
-        if (context.lastKey == ExtKeys::RETURN)
+        std::string strText = context.fullCommand;
+        if (strText[0] == ExtKeys::RETURN)
         {
             strText = "\n";
         }
-        else if (context.lastKey == ExtKeys::TAB)
+        else if (strText[0] == ExtKeys::TAB)
         {
             // 4 spaces, obviously
             strText = "    ";
@@ -1666,23 +1709,51 @@ void ZepMode::UpdateVisualSelection()
     }
 }
 
-bool ZepMode::HandleExCommand(std::string strCommand, const char key)
+bool ZepMode::HandleExCommand(std::string strCommand)
 {
     if (strCommand.empty())
         return false;
 
-    if (key == ExtKeys::RETURN)
+    if (strCommand[strCommand.size() - 1] == ExtKeys::BACKSPACE)
+    {
+        // Remove the backspace
+        m_currentCommand.pop_back();
+
+        // Remove the previous character
+        if (!m_currentCommand.empty())
+            m_currentCommand.pop_back();
+
+        if (m_currentCommand.empty())
+        {
+            GetEditor().GetActiveTabWindow()->GetActiveWindow()->SetBufferCursor(m_exCommandStartLocation);
+            return true;
+        }
+        return false;
+    }
+    if (strCommand[strCommand.size() - 1] == ExtKeys::RETURN)
     {
         auto pWindow = GetEditor().GetActiveTabWindow()->GetActiveWindow();
         auto& buffer = pWindow->GetBuffer();
         auto bufferCursor = pWindow->GetBufferCursor();
-        if (GetEditor().Broadcast(std::make_shared<ZepMessage>(Msg::HandleCommand, strCommand)))
+
+        if (strCommand[0] == '/' || strCommand[0] == '?')
         {
-            m_currentCommand.clear();
+            // Just exit Ex mode when finished the search
             return true;
         }
 
+        // Remove the return
         strCommand = strCommand.substr(0, strCommand.length() - 1);
+        if (strCommand == "")
+        {
+            return false;
+        }
+
+        if (GetEditor().Broadcast(std::make_shared<ZepMessage>(Msg::HandleCommand, strCommand)))
+        {
+            return true;
+        }
+
         if (strCommand == ":reg")
         {
             std::ostringstream str;
@@ -1972,8 +2043,6 @@ bool ZepMode::HandleExCommand(std::string strCommand, const char key)
         {
             GetEditor().SetCommandText("Not a command");
         }
-
-        m_currentCommand.clear();
         return true;
     }
     else if (!m_currentCommand.empty() && m_currentCommand[0] == '/' || m_currentCommand[0] == '?')

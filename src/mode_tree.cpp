@@ -47,7 +47,7 @@ void ZepMode_Tree::PreDisplay()
     m_spVim->PreDisplay();
 }
 
-std::shared_ptr<CommandContext> ZepMode_Tree::AddKeyPress(uint32_t key, uint32_t modifiers)
+void ZepMode_Tree::AddKeyPress(uint32_t key, uint32_t modifiers)
 {
     m_spVim->AddKeyPress(key, modifiers);
 
@@ -179,7 +179,6 @@ std::shared_ptr<CommandContext> ZepMode_Tree::AddKeyPress(uint32_t key, uint32_t
     // Ensure cursor is at buffer end
     m_window.SetBufferCursor(MaxCursorMove);
     */
-    return nullptr;
 }
 
 void ZepMode_Tree::BuildTree()

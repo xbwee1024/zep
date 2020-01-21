@@ -33,7 +33,7 @@ ZepMode_Search::~ZepMode_Search()
     }
 }
 
-std::shared_ptr<CommandContext> ZepMode_Search::AddKeyPress(uint32_t key, uint32_t modifiers)
+void ZepMode_Search::AddKeyPress(uint32_t key, uint32_t modifiers)
 {
     (void)modifiers;
     if (key == ExtKeys::ESCAPE)
@@ -46,12 +46,12 @@ std::shared_ptr<CommandContext> ZepMode_Search::AddKeyPress(uint32_t key, uint32
         GetEditor().GetActiveTabWindow()->RemoveWindow(&m_window);
         GetEditor().GetActiveTabWindow()->SetActiveWindow(&m_launchWindow);
         GetEditor().RemoveBuffer(&buffer);
-        return nullptr;
+        return;
     }
     else if (key == ExtKeys::RETURN)
     {
         OpenSelection(OpenType::Replace);
-        return nullptr;
+        return;
     }
     else if (key == ExtKeys::BACKSPACE)
     {
@@ -76,17 +76,17 @@ std::shared_ptr<CommandContext> ZepMode_Search::AddKeyPress(uint32_t key, uint32
             else if (key == 'v')
             {
                 OpenSelection(OpenType::VSplit);
-                return nullptr;
+                return;
             }
             else if (key == 'x')
             {
                 OpenSelection(OpenType::HSplit);
-                return nullptr;
+                return;
             }
             else if (key == 't')
             {
                 OpenSelection(OpenType::Tab);
-                return nullptr;
+                return;
             }
         }
         else if (key > 0 && key < 127)
@@ -105,7 +105,6 @@ std::shared_ptr<CommandContext> ZepMode_Search::AddKeyPress(uint32_t key, uint32
     }
 
     GetEditor().SetCommandText(str.str());
-    return nullptr;
 }
 
 // TODO: Later we will have a project manager for tags, search, etc.

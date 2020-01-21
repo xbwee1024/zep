@@ -68,9 +68,9 @@ bool ZepMode_Standard::SwitchMode(EditorMode mode)
 }
 */
 
-std::shared_ptr<CommandContext> ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
+void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
 {
-    auto spContext = ZepMode::AddKeyPress(key, modifierKeys);
+    ZepMode::AddKeyPress(key, modifierKeys);
 
     /*
     std::string ch(1, (char)key);
@@ -400,7 +400,6 @@ std::shared_ptr<CommandContext> ZepMode_Standard::AddKeyPress(uint32_t key, uint
         buffer.SetSelection(BufferRange{m_visualBegin, m_visualEnd});
     }
     */
-    return spContext;
 }
 
 

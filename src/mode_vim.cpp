@@ -124,7 +124,7 @@ void ZepMode_Vim::Init()
     keymap_add({ &m_normalMap, &m_visualMap }, { "gg" }, id_MotionGotoBeginning);
 
     // Not necessary?
-    keymap_add({ &m_normalMap, &m_visualMap, &m_exMap, &m_insertMap }, { "<Escape>" }, id_NormalMode);
+    keymap_add({ &m_normalMap, &m_visualMap, &m_insertMap }, { "<Escape>" }, id_NormalMode);
 
     // Visual mode
     keymap_add(m_visualMap, "iW", id_VisualSelectInnerWORD);
@@ -165,9 +165,6 @@ void ZepMode_Vim::Init()
     // Insert Mode
     keymap_add({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
     keymap_add({ &m_insertMap }, { "jk" }, id_NormalMode);
-
-    // Ex Mode
-    keymap_add({ &m_exMap }, { "<Backspace>" }, id_ExBackspace);
 }
 
 void ZepMode_Vim::Begin()
@@ -180,7 +177,6 @@ void ZepMode_Vim::Begin()
     m_currentMode = EditorMode::Normal;
     m_currentCommand.clear();
     m_lastCommand.clear();
-    m_lastCount = 0;
     m_pendingEscape = false;
 }
 
@@ -199,107 +195,6 @@ void ZepMode_Vim::PreDisplay()
 } // namespace Zep
 
 /*
-            // Remember a new modification command and clear the last dot command string
-            if (spContext->commandResult.spCommand && key != '.')
-            {
-                m_lastCommand = spContext->command;
-                m_lastCount = spContext->count;
-                m_lastInsertString.clear();
-            }
-
-            // Dot group means we have an extra command to append
-            // This is to make a command and insert into a single undo operation
-            bool appendDotInsert = false;
-
-            // Label group beginning
-            if (spContext->commandResult.spCommand)
-            {
-                if (key == '.' && !m_lastInsertString.empty() && spContext->commandResult.modeSwitch == EditorMode::Insert)
-                {
-                    appendDotInsert = true;
-                }
-
-                if (appendDotInsert || (spContext->count > 1 && !(spContext->commandResult.flags & CommandResultFlags::HandledCount)))
-                {
-                    spContext->commandResult.spCommand->SetFlags(CommandFlags::GroupBoundary);
-                }
-                AddCommand(spContext->commandResult.spCommand);
-            }
-
-            // Next commands (for counts)
-            // Many command handlers do the right thing for counts; if they don't we basically interpret the command
-            // multiple times to implement it.
-            if (!(spContext->commandResult.flags & CommandResultFlags::HandledCount))
-            {
-                for (int i = 1; i < spContext->count; i++)
-                {
-                    // May immediate execute and not return a command...
-                    // Create a new 'inner' spContext-> for the next command, because we need to re-initialize the command
-                    // spContext-> for 'after' what just happened!
-                    CommandContext contextInner(m_currentCommand, *this, key, modifierKeys, m_currentMode);
-                    if (GetCommand(contextInner) && contextInner.commandResult.spCommand)
-                    {
-                        // Group counted
-                        if (i == (spContext->count - 1) && !appendDotInsert)
-                        {
-                            contextInner.commandResult.spCommand->SetFlags(CommandFlags::GroupBoundary);
-                        }
-
-                        // Actually queue/do command
-                        AddCommand(contextInner.commandResult.spCommand);
-                    }
-                }
-            }
-
-            ResetCommand();
-
-            // A mode to switch to after the command is done
-            SwitchMode(spContext->commandResult.modeSwitch);
-
-            // If used dot command, append the inserted text.  This is a little confusing.
-            // TODO: Think of a cleaner way to express it
-            if (appendDotInsert)
-            {
-                if (!m_lastInsertString.empty())
-                {
-                    auto cmd = std::make_shared<ZepCommand_Insert>(
-                        GetCurrentWindow()->GetBuffer(),
-                        GetCurrentWindow()->GetBufferCursor(),
-                        m_lastInsertString,
-                        spContext->bufferCursor);
-                    cmd->SetFlags(CommandFlags::GroupBoundary);
-                    AddCommand(std::static_pointer_cast<ZepCommand>(cmd));
-                }
-                SwitchMode(EditorMode::Normal);
-            }
-
-            // Any motions while in Vim mode will update the selection
-            UpdateVisualSelection();
-        }
-        else
-        {
-            if (m_currentMode == EditorMode::Insert)
-            {
-                HandleInsert(key);
-                ResetCommand();
-            }
-            else
-            {
-                // If the user has so far typed numbers, then wait for more input
-                if (!m_currentCommand.empty() && m_currentCommand.find_first_not_of("0123456789") == std::string::npos)
-                {
-                    spContext->commandResult.flags |= CommandResultFlags::NeedMoreChars;
-                }
-                // Handled, but no new command
-
-                // A better mechanism is required for clearing pending commands!
-                if (m_currentCommand[0] != ':' && m_currentCommand[0] != '"' && !(spContext->commandResult.flags & CommandResultFlags::NeedMoreChars))
-                {
-                    ResetCommand();
-                }
-            }
-        }
-    }
     if (m_pendingEscape)
     {
         // My custom 'jk' escape option
