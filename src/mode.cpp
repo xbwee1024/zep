@@ -14,7 +14,7 @@ CommandContext::CommandContext(const std::string& commandIn, ZepMode& md, Editor
     , buffer(md.GetCurrentWindow()->GetBuffer())
     , bufferCursor(md.GetCurrentWindow()->GetBufferCursor())
     , tempReg("", false)
-    , mode(editorMode)
+    , currentMode(editorMode)
 {
     registers.push('"');
     pRegister = &tempReg;
@@ -244,9 +244,9 @@ EditorMode ZepMode::GetEditorMode() const
     return m_currentMode;
 }
 
-void ZepMode::SetEditorMode(EditorMode mode)
+void ZepMode::SetEditorMode(EditorMode currentMode)
 {
-    m_currentMode = mode;
+    m_currentMode = currentMode;
 }
 
 void ZepMode::AddCommandText(std::string strText)
@@ -268,22 +268,22 @@ void ZepMode::ClampCursorForMode()
 
 // TODO: This happens every time and doesn't guard against repeats. And some logic requires that.
 // Should really just switch if not the same.  The new command setup should make this easier to fix
-void ZepMode::SwitchMode(EditorMode mode)
+void ZepMode::SwitchMode(EditorMode currentMode)
 {
     // Don't switch to invalid mode
-    if (mode == EditorMode::None)
+    if (currentMode == EditorMode::None)
         return;
 
-    if (mode == m_currentMode)
+    if (currentMode == m_currentMode)
         return;
 
     auto pWindow = GetCurrentWindow();
     auto& buffer = pWindow->GetBuffer();
     auto cursor = pWindow->GetBufferCursor();
 
-    if (mode == EditorMode::Insert && buffer.TestFlags(FileFlags::ReadOnly))
+    if (currentMode == EditorMode::Insert && buffer.TestFlags(FileFlags::ReadOnly))
     {
-        mode = EditorMode::Normal;
+        currentMode = EditorMode::Normal;
     }
 
     // When leaving Ex mode, reset search markers
@@ -301,7 +301,7 @@ void ZepMode::SwitchMode(EditorMode mode)
     else if (m_currentMode == EditorMode::Insert)
     {
         // When switching back to normal mode, put the cursor on the last character typed
-        if (mode == EditorMode::Normal)
+        if (currentMode == EditorMode::Normal)
         {
             // Move back, but not to the previous line
             auto lineStart = buffer.GetLinePos(cursor, LineLocation::LineBegin);
@@ -309,9 +309,9 @@ void ZepMode::SwitchMode(EditorMode mode)
         }
     }
 
-    m_currentMode = mode;
+    m_currentMode = currentMode;
 
-    switch (mode)
+    switch (currentMode)
     {
     case EditorMode::Normal:
     {
@@ -404,21 +404,25 @@ void ZepMode::HandleMappedInput(const std::string& input)
     }
 
     // Special case, dot command (do last edit again)
-    if (m_currentMode == EditorMode::Normal &&
-        input[input.size() - 1] == '.')
+    // Dot command is complicated, this is my second attempt at implementing it and is less
+    // complex.  The approach is to store relevent key strokes for the last edit operation, 
+    // and replay them when the user uses the dot.
+    if (m_currentMode == EditorMode::Normal && input[input.size() - 1] == '.')
     {
-        auto lastCommand = m_lastCommand;
+        // Save and restore the last command while doing it.
+        auto lastCommand = m_dotCommand;
         for (auto& last : lastCommand)
         {
             HandleMappedInput(std::string(1, last));
         }
-        m_lastCommand = lastCommand;
-        
+        m_dotCommand = lastCommand;
+
         SwitchMode(EditorMode::Normal);
 
         return;
     }
 
+    // The current command is our currently typed multi-key operation
     m_currentCommand += input;
 
     // Reset the timer for the last edit, for time-sensitive key strokes
@@ -430,15 +434,25 @@ void ZepMode::HandleMappedInput(const std::string& input)
     // Reset command text - it may get updated later.
     GetEditor().SetCommandText("");
 
-    // Make the new command
-    auto spContext = std::make_shared<CommandContext>(m_currentCommand, *this, m_currentMode);
-    spContext->foundCommand = GetCommand(*spContext);
-
-    // Ex mode, or show chars mode
+    // Ex mode, or show chars mode, we display the text typed
     if (m_currentMode == EditorMode::Ex || m_settings.ShowNormalModeKeyStrokes)
     {
         GetEditor().SetCommandText(m_currentCommand);
     }
+
+    // Figure out the command we have typed. foundCommand means that the command was interpreted and understood.
+    // If spCommand is returned, then there is an atomic command operation that needs to be done.
+    auto spContext = std::make_shared<CommandContext>(m_currentCommand, *this, m_currentMode);
+    spContext->foundCommand = GetCommand(*spContext);
+
+    // A lambda to check for a pending mode switch after the command
+    auto enteringMode = [=](auto mode) {
+        if (m_currentMode != spContext->commandResult.modeSwitch && spContext->commandResult.modeSwitch == mode)
+        {
+            return true;
+        }
+        return false;
+    };
 
     // Escape Nukes the current command - we handle it in the keyboard mappings after that
     // TODO: This feels awkward
@@ -451,33 +465,43 @@ void ZepMode::HandleMappedInput(const std::string& input)
     if (spContext->foundCommand)
     {
         // It's an undoable command  - add it
-        // Note: a command here is something that modifies the text, so it is kind of like an insert
+        // Note: a command here is something that modifies the text.  It can be something like a delete
+        // or a simple insert
         if (spContext->commandResult.spCommand)
         {
-            // If not in insert mode, begin the group
+            // If not in insert mode, begin the group, because we have started a new operation
             if (m_currentMode != EditorMode::Insert)
             {
                 AddCommand(std::make_shared<ZepCommand_BeginGroup>(spContext->buffer));
-                m_lastCommand = m_currentCommand;
+
+                // Record for the dot command
+                m_dotCommand = m_currentCommand;
             }
             else
             {
-                // In insert mode k
-                m_lastCommand += input;
+                // In insert mode keep the text for the dot command.  An insert adds a command too!
+                m_dotCommand += input;
             }
 
             // Do the command
             AddCommand(spContext->commandResult.spCommand);
         }
-        /*else if (m_currentMode == EditorMode::Insert)
+        else
         {
-            m_lastCommand += input;
-        }*/
+            // This command didn't change anything, but switched into insert mode, so
+            // remember the dot command that did it
+            if (enteringMode(EditorMode::Insert))
+            {
+                AddCommand(std::make_shared<ZepCommand_BeginGroup>(spContext->buffer));
+                m_dotCommand = m_currentCommand;
+            }
+        }
 
         // If the command can't manage the count, we do it
         // Maybe all commands should handle the count?  What are the implications of that?  This bit is a bit messy
         if (!(spContext->commandResult.flags & CommandResultFlags::HandledCount))
         {
+            // Ignore count == 1, we already did it
             for (int i = 1; i < spContext->count; i++)
             {
                 // May immediate execute and not return a command...
@@ -492,13 +516,10 @@ void ZepMode::HandleMappedInput(const std::string& input)
             }
         }
 
-        if (spContext->commandResult.spCommand)
+        // Back from insert will mean we end the undo group
+        if (enteringMode(EditorMode::Normal))
         {
-            // Back from insert will mean we end the undo group
-            if (spContext->commandResult.modeSwitch != EditorMode::Insert && spContext->commandResult.modeSwitch != EditorMode::None)
-            {
-                AddCommand(std::make_shared<ZepCommand_EndGroup>(spContext->buffer));
-            }
+            AddCommand(std::make_shared<ZepCommand_EndGroup>(spContext->buffer));
         }
 
         // A mode to switch to after the command is done
@@ -523,6 +544,7 @@ void ZepMode::HandleMappedInput(const std::string& input)
         // a command is not 'finished'.  The user can always escape/return of course, but it's neater if invalid
         // commands are ignored, as we mostly do.  To add a regex, the keymapper would have to build a tree and 'capture'
         // relevent information, for example for 'f<?graph>' you would capture the char to find
+        // In this way, arriving at a tree leaf without a command would easily tell us that we had failed to match a command
         if ((spContext->commandResult.flags & CommandResultFlags::NeedMoreChars) == 0)
         {
             if (m_currentMode != EditorMode::Ex && spContext->command[0] != '"')
@@ -607,7 +629,7 @@ NVec2i ZepMode::GetVisualRange() const
 
 const std::string& ZepMode::GetLastCommand() const
 {
-    return m_lastCommand;
+    return m_dotCommand;
 }
 
 bool ZepMode::GetCommand(CommandContext& context)
@@ -644,8 +666,7 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
 
     // Didn't find an immediate match, found a count and there is no other part to the command
-    if (context.mode == EditorMode::Normal &&
-        mappedCommand == 0 && context.foundCount && context.command.empty())
+    if (context.currentMode == EditorMode::Normal && mappedCommand == 0 && context.foundCount && context.command.empty())
     {
         needMoreChars = true;
     }
@@ -659,6 +680,8 @@ bool ZepMode::GetCommand(CommandContext& context)
 
     if (mappedCommand == id_NormalMode)
     {
+        // TODO: I think this should be a 'command' which would get replayed with dot; 
+        // instead of special casing it later, we could just insert it into the stream of commands
         context.commandResult.modeSwitch = EditorMode::Normal;
         return true;
     }
@@ -667,12 +690,6 @@ bool ZepMode::GetCommand(CommandContext& context)
         context.commandResult.modeSwitch = EditorMode::Ex;
         return true;
     }
-    /*
-    else if (mappedCommand == id_Execute)
-    {
-
-    }
-    */
     // Control
     else if (mappedCommand == id_MotionNextMarker)
     {
@@ -866,6 +883,24 @@ bool ZepMode::GetCommand(CommandContext& context)
         GetCurrentWindow()->SetBufferCursor(std::max(context.bufferCursor - context.count, lineStart));
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
+    }
+    else if (mappedCommand == id_MotionStandardRight)
+    {
+        GetCurrentWindow()->SetBufferCursor(bufferCursor + 1);
+        GetEditor().ResetCursorTimer();
+    }
+    else if (mappedCommand == id_MotionStandardLeft)
+    {
+        GetCurrentWindow()->SetBufferCursor(bufferCursor - 1);
+        GetEditor().ResetCursorTimer();
+    }
+    else if (mappedCommand == id_MotionStandardUp)
+    {
+        GetCurrentWindow()->MoveCursorY(-1, LineLocation::LineCRBegin);
+    }
+    else if (mappedCommand == id_MotionStandardDown)
+    {
+        GetCurrentWindow()->MoveCursorY(1, LineLocation::LineCRBegin);
     }
     else if (mappedCommand == id_MotionPageForward)
     {
@@ -1076,12 +1111,15 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
     else if (mappedCommand == id_InsertMode)
     {
+        // TODO: I think this should be a 'command' which would get replayed with dot; 
+        // instead of special casing it later, we could just insert it into the stream of commands
+        // Then undo/redo would replay the insert operation neatly
         context.commandResult.modeSwitch = EditorMode::Insert;
         return true;
     }
     else if (mappedCommand == id_VisualSelectInnerWORD)
     {
-        if (GetOperationRange("iW", context.mode, context.beginRange, context.endRange))
+        if (GetOperationRange("iW", context.currentMode, context.beginRange, context.endRange))
         {
             m_visualBegin = context.beginRange;
             m_visualEnd = context.endRange;
@@ -1093,7 +1131,7 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
     else if (mappedCommand == id_VisualSelectInnerWord)
     {
-        if (GetOperationRange("iw", context.mode, context.beginRange, context.endRange))
+        if (GetOperationRange("iw", context.currentMode, context.beginRange, context.endRange))
         {
             m_visualBegin = context.beginRange;
             m_visualEnd = context.endRange;
@@ -1109,7 +1147,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             if (context.command == "d")
             {
                 // Only in visual mode; delete selected block
-                if (GetOperationRange("visual", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("visual", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                     context.commandResult.modeSwitch = EditorMode::Normal;
@@ -1121,7 +1159,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             else if (context.command == "dd")
             {
-                if (GetOperationRange("line", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("line", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::DeleteLines;
                     context.commandResult.modeSwitch = EditorMode::Normal;
@@ -1129,21 +1167,21 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             else if (context.command == "d$" || context.command == "D")
             {
-                if (GetOperationRange("$", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("$", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
             }
             else if (context.command == "dw")
             {
-                if (GetOperationRange("w", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("w", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
             }
             else if (context.command == "dW")
             {
-                if (GetOperationRange("W", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("W", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
@@ -1154,14 +1192,14 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             else if (context.command == "daw")
             {
-                if (GetOperationRange("aw", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("aw", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
             }
             else if (context.command == "daW")
             {
-                if (GetOperationRange("aW", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("aW", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
@@ -1172,14 +1210,14 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             else if (context.command == "diw")
             {
-                if (GetOperationRange("iw", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("iw", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
             }
             else if (context.command == "diW")
             {
-                if (GetOperationRange("iW", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("iW", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
@@ -1220,7 +1258,7 @@ bool ZepMode::GetCommand(CommandContext& context)
                 context.pRegister = &context.tempReg;
 
                 // Get the range from visual, or use the cursor location
-                if (!GetOperationRange("visual", context.mode, context.beginRange, context.endRange))
+                if (!GetOperationRange("visual", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.beginRange = bufferCursor;
                     context.endRange = buffer.LocationFromOffsetByChars(bufferCursor, context.count);
@@ -1241,12 +1279,12 @@ bool ZepMode::GetCommand(CommandContext& context)
             else if (context.command == "s")
             {
                 // Only in visual mode; delete selected block and go to insert mode
-                if (GetOperationRange("visual", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("visual", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
                 // Just delete under m_bufferCursor and insert
-                else if (GetOperationRange("cursor", context.mode, context.beginRange, context.endRange))
+                else if (GetOperationRange("cursor", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
@@ -1262,7 +1300,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             if (context.command == "c")
             {
                 // Only in visual mode; delete selected block
-                if (GetOperationRange("visual", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("visual", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
@@ -1273,28 +1311,28 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             else if (context.command == "cc")
             {
-                if (GetOperationRange("line", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("line", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::DeleteLines;
                 }
             }
             else if (context.command == "c$" || context.command == "C")
             {
-                if (GetOperationRange("$", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("$", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
             }
             else if (context.command == "cw")
             {
-                if (GetOperationRange("cw", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("cw", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
             }
             else if (context.command == "cW")
             {
-                if (GetOperationRange("cW", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("cW", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
@@ -1305,14 +1343,14 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             else if (context.command == "caw")
             {
-                if (GetOperationRange("aw", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("aw", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
             }
             else if (context.command == "caW")
             {
-                if (GetOperationRange("aW", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("aW", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
@@ -1323,14 +1361,14 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             else if (context.command == "ciw")
             {
-                if (GetOperationRange("iw", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("iw", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
             }
             else if (context.command == "ciW")
             {
-                if (GetOperationRange("iW", context.mode, context.beginRange, context.endRange))
+                if (GetOperationRange("iW", context.currentMode, context.beginRange, context.endRange))
                 {
                     context.op = CommandOperation::Delete;
                 }
@@ -1387,7 +1425,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         }
         else if (context.command[0] == 'y')
         {
-            if (context.mode == EditorMode::Visual)
+            if (context.currentMode == EditorMode::Visual)
             {
                 context.registers.push('0');
                 context.beginRange = m_visualBegin;
@@ -1395,7 +1433,7 @@ bool ZepMode::GetCommand(CommandContext& context)
                 context.commandResult.modeSwitch = EditorMode::Normal;
                 context.op = m_lineWise ? CommandOperation::CopyLines : CommandOperation::Copy;
             }
-            else if (context.mode == EditorMode::Normal)
+            else if (context.currentMode == EditorMode::Normal)
             {
                 if (context.command == "y")
                 {
@@ -1428,7 +1466,7 @@ bool ZepMode::GetCommand(CommandContext& context)
                 {
                     if (context.command[1] == 'W')
                     {
-                        if (GetOperationRange("aW", context.mode, context.beginRange, context.endRange))
+                        if (GetOperationRange("aW", context.currentMode, context.beginRange, context.endRange))
                         {
                             m_visualBegin = context.beginRange;
                             m_visualEnd = context.endRange;
@@ -1440,7 +1478,7 @@ bool ZepMode::GetCommand(CommandContext& context)
                     }
                     else if (context.command[1] == 'w')
                     {
-                        if (GetOperationRange("aw", context.mode, context.beginRange, context.endRange))
+                        if (GetOperationRange("aw", context.currentMode, context.beginRange, context.endRange))
                         {
                             m_visualBegin = context.beginRange;
                             m_visualEnd = context.endRange;
@@ -1523,7 +1561,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         }
         else if (context.command[0] == ExtKeys::RETURN)
         {
-            if (context.mode == EditorMode::Normal)
+            if (context.currentMode == EditorMode::Normal)
             {
                 // Normal mode - RETURN moves cursor down a line!
                 GetCurrentWindow()->MoveCursorY(1);
@@ -1613,7 +1651,7 @@ void ZepMode::ResetCommand()
     m_currentCommand.clear();
 }
 
-bool ZepMode::GetOperationRange(const std::string& op, EditorMode mode, BufferLocation& beginRange, BufferLocation& endRange) const
+bool ZepMode::GetOperationRange(const std::string& op, EditorMode currentMode, BufferLocation& beginRange, BufferLocation& endRange) const
 {
     auto& buffer = GetCurrentWindow()->GetBuffer();
     const auto bufferCursor = GetCurrentWindow()->GetBufferCursor();
@@ -1621,7 +1659,7 @@ bool ZepMode::GetOperationRange(const std::string& op, EditorMode mode, BufferLo
     beginRange = BufferLocation{ -1 };
     if (op == "visual")
     {
-        if (mode == EditorMode::Visual)
+        if (currentMode == EditorMode::Visual)
         {
             beginRange = m_visualBegin;
             endRange = m_visualEnd;

@@ -226,7 +226,7 @@ public:
 
     ZepMode* GetGlobalMode();
     void RegisterGlobalMode(std::shared_ptr<ZepMode> spMode);
-    void SetGlobalMode(const std::string& mode);
+    void SetGlobalMode(const std::string& currentMode);
     ZepMode* GetSecondaryMode() const;
 
     void Display();
@@ -356,8 +356,6 @@ private:
     mutable tRegisters m_registers;
 
     std::shared_ptr<ZepTheme> m_spTheme;
-    std::shared_ptr<ZepMode_Vim> m_spVimMode;
-    std::shared_ptr<ZepMode_Standard> m_spStandardMode;
     std::map<std::string, SyntaxProvider> m_mapSyntax;
     std::map<std::string, std::shared_ptr<ZepMode>> m_mapModes;
 

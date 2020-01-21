@@ -176,7 +176,7 @@ void ZepMode_Vim::Begin()
     }
     m_currentMode = EditorMode::Normal;
     m_currentCommand.clear();
-    m_lastCommand.clear();
+    m_dotCommand.clear();
     m_pendingEscape = false;
 }
 

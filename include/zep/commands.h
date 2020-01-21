@@ -8,8 +8,8 @@ namespace Zep
 class ZepCommand
 {
 public:
-    ZepCommand(ZepBuffer& mode, BufferLocation cursorBefore = -1, BufferLocation cursorAfter = -1)
-        : m_buffer(mode)
+    ZepCommand(ZepBuffer& currentMode, BufferLocation cursorBefore = -1, BufferLocation cursorAfter = -1)
+        : m_buffer(currentMode)
         , m_cursorBefore(cursorBefore)
         , m_cursorAfter(cursorAfter)
     {
@@ -40,7 +40,7 @@ protected:
 class ZepCommand_BeginGroup : public ZepCommand
 {
 public:
-    ZepCommand_BeginGroup(ZepBuffer& mode) : ZepCommand(mode) {}
+    ZepCommand_BeginGroup(ZepBuffer& currentMode) : ZepCommand(currentMode) {}
     virtual void Redo() override {};
     virtual void Undo() override {};
 };
@@ -48,7 +48,7 @@ public:
 class ZepCommand_EndGroup : public ZepCommand
 {
 public:
-    ZepCommand_EndGroup(ZepBuffer& mode) : ZepCommand(mode) {}
+    ZepCommand_EndGroup(ZepBuffer& currentMode) : ZepCommand(currentMode) {}
     virtual void Redo() override {};
     virtual void Undo() override {};
 };

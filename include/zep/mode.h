@@ -137,7 +137,7 @@ public:
     const Register* pRegister = nullptr;
 
     // Input State
-    EditorMode mode = EditorMode::None;
+    EditorMode currentMode = EditorMode::None;
     int count = 1;
     bool foundCount = false;
 
@@ -171,7 +171,7 @@ public:
     virtual void AddCommandText(std::string strText);
     virtual void AddCommand(std::shared_ptr<ZepCommand> spCmd);
     virtual EditorMode GetEditorMode() const;
-    virtual void SetEditorMode(EditorMode mode);
+    virtual void SetEditorMode(EditorMode currentMode);
 
     // ZepComponent
     virtual void PreDisplay(){};
@@ -189,13 +189,13 @@ public:
     virtual bool GetCommand(CommandContext& context);
     virtual void ResetCommand();
 
-    virtual bool GetOperationRange(const std::string& op, EditorMode mode, BufferLocation& beginRange, BufferLocation& endRange) const;
+    virtual bool GetOperationRange(const std::string& op, EditorMode currentMode, BufferLocation& beginRange, BufferLocation& endRange) const;
 
     virtual void UpdateVisualSelection();
 
 
 protected:
-    virtual void SwitchMode(EditorMode mode);
+    virtual void SwitchMode(EditorMode currentMode);
     virtual void ClampCursorForMode();
     virtual bool HandleExCommand(std::string strCommand);
     virtual std::string ConvertInputToMapString(uint32_t key, uint32_t modifierKeys);
@@ -207,7 +207,7 @@ protected:
     bool m_lineWise = false;
     BufferLocation m_visualBegin = 0;
     BufferLocation m_visualEnd = 0;
-    std::string m_lastCommand;
+    std::string m_dotCommand;
 
     // Keyboard mappings
     KeyMap m_normalMap;

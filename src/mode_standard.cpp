@@ -26,10 +26,106 @@ namespace Zep
 ZepMode_Standard::ZepMode_Standard(ZepEditor& editor)
     : ZepMode(editor)
 {
+    Init();
 }
 
 ZepMode_Standard::~ZepMode_Standard()
 {
+}
+
+void ZepMode_Standard::Init()
+{
+    for (int i = 0; i <= 9; i++)
+    {
+        GetEditor().SetRegister('0' + (const char)i, "");
+    }
+    GetEditor().SetRegister('"', "");
+
+    /*
+    // Normal and Visual
+    keymap_add({ &m_normalMap, &m_visualMap }, { "Y" }, id_YankLine);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "x", "<Del>" }, id_Delete);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "J" }, id_JoinLines);
+
+    // Motions
+
+    // Line Motions
+    keymap_add({ &m_normalMap, &m_visualMap }, { "$" }, id_MotionLineEnd);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "0" }, id_MotionLineBegin);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "^" }, id_MotionLineFirstChar);
+
+    // Page Motinos
+    keymap_add({ &m_normalMap, &m_visualMap }, { "j", "<Down>" }, id_MotionDown);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "k", "<Up>" }, id_MotionUp);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "l", "<Right>" }, id_MotionRight);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "h", "<Left>", "<Backspace>" }, id_MotionLeft);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-f>", "<PageDown>" }, id_MotionPageForward);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-b>", "<PageUp>" }, id_MotionPageBackward);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-d>" }, id_MotionHalfPageForward);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-u>" }, id_MotionHalfPageBackward);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "G" }, id_MotionGotoLine);
+
+    // Word motions
+    keymap_add({ &m_normalMap, &m_visualMap }, { "w" }, id_MotionWord);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "b" }, id_MotionBackWord);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "W" }, id_MotionWORD);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "B" }, id_MotionBackWORD);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "e" }, id_MotionEndWord);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "E" }, id_MotionEndWORD);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "ge" }, id_MotionBackEndWord);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "gE" }, id_MotionBackEndWORD);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "gg" }, id_MotionGotoBeginning);
+
+    // Not necessary?
+    keymap_add({ &m_normalMap, &m_visualMap, &m_insertMap }, { "<Escape>" }, id_NormalMode);
+
+    // Visual mode
+    keymap_add(m_visualMap, "iW", id_VisualSelectInnerWORD);
+    keymap_add(m_visualMap, "iw", id_VisualSelectInnerWord);
+
+    // Normal mode only
+    keymap_add(m_normalMap, "i", id_InsertMode);
+    keymap_add(m_normalMap, "H", id_PreviousTabWindow);
+    keymap_add(m_normalMap, "L", id_NextTabWindow);
+    keymap_add(m_normalMap, "o", id_OpenLineBelow);
+    keymap_add(m_normalMap, "O", id_OpenLineAbove);
+    keymap_add(m_normalMap, "V", id_VisualLineMode);
+    keymap_add(m_normalMap, "v", id_VisualMode);
+
+    keymap_add(m_normalMap, "<F8>", id_MotionNextMarker);
+    keymap_add(m_normalMap, "<S-F8>", id_MotionPreviousMarker);
+
+    keymap_add(m_normalMap, "+", id_FontBigger);
+    keymap_add(m_normalMap, "-", id_FontSmaller);
+
+    keymap_add(m_normalMap, "<C-i><C-o>", id_SwitchToAlternateFile);
+
+    keymap_add(m_normalMap, "<C-j>", id_MotionDownSplit);
+    keymap_add(m_normalMap, "<C-l>", id_MotionRightSplit);
+    keymap_add(m_normalMap, "<C-k>", id_MotionUpSplit);
+    keymap_add(m_normalMap, "<C-h>", id_MotionLeftSplit);
+
+    keymap_add({ &m_normalMap }, { "<C-p>", "<C-,>" }, id_QuickSearch);
+
+    keymap_add({ &m_normalMap, &m_visualMap }, { ":", "/", "?" }, id_ExMode);
+
+    /* Standard mode
+    keymap_add({ &m_normalMap }, { "<C-y>"}, id_Redo);
+    */
+
+    // Insert Mode
+    keymap_add({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
+    keymap_add({ &m_insertMap }, { "<Del>" }, id_Delete);
+    keymap_add({ &m_insertMap }, { "<C-y>" }, id_Redo);
+    keymap_add({ &m_insertMap }, { "<C-z>" }, id_Undo);
+
+    keymap_add({ &m_insertMap }, { "<Left>" }, id_MotionStandardLeft);
+    keymap_add({ &m_insertMap }, { "<Right>" }, id_MotionStandardRight);
+    keymap_add({ &m_insertMap }, { "<Up>" }, id_MotionStandardUp);
+    keymap_add({ &m_insertMap }, { "<Down>" }, id_MotionStandardDown);
+    
+    keymap_add({ &m_insertMap }, { "<C-Left>" }, id_MotionBackWord);
+    keymap_add({ &m_insertMap }, { "<C-Right>" }, id_MotionWord);
 }
 
 void ZepMode_Standard::Begin()
@@ -38,37 +134,7 @@ void ZepMode_Standard::Begin()
     SwitchMode(EditorMode::Insert);
 }
 
-/*
-bool ZepMode_Standard::SwitchMode(EditorMode mode)
-{
-    assert(mode == EditorMode::Insert || mode == EditorMode::Visual);
-    if (mode == m_currentMode)
-    {
-        return false;
-    }
-
-    m_currentMode = mode;
-
-    if (GetCurrentWindow())
-    {
-        // Cursor is always in insert mode for standard
-        GetCurrentWindow()->SetCursorType(CursorType::Insert);
-    }
-
-    if (mode == EditorMode::Insert)
-    {
-        m_visualBegin = m_visualEnd = 0;
-    }
-    else
-    {
-        m_visualBegin = GetCurrentWindow()->GetBufferCursor();
-        m_visualEnd = m_visualBegin;
-    }
-    return true;
-}
-*/
-
-void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
+/*void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
 {
     ZepMode::AddKeyPress(key, modifierKeys);
 
@@ -244,24 +310,6 @@ void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
         GetCurrentWindow()->SetBufferCursor(pos);
         GetEditor().ResetCursorTimer();
     }
-    else if (key == ExtKeys::RIGHT)
-    {
-        GetCurrentWindow()->SetBufferCursor(bufferCursor + 1);
-        GetEditor().ResetCursorTimer();
-    }
-    else if (key == ExtKeys::LEFT)
-    {
-        GetCurrentWindow()->SetBufferCursor(bufferCursor - 1);
-        GetEditor().ResetCursorTimer();
-    }
-    else if (key == ExtKeys::UP)
-    {
-        GetCurrentWindow()->MoveCursorY(-1, LineLocation::LineCRBegin);
-    }
-    else if (key == ExtKeys::DOWN)
-    {
-        GetCurrentWindow()->MoveCursorY(1, LineLocation::LineCRBegin);
-    }
     else if (key == ExtKeys::RETURN)
     {
         ch = "\n";
@@ -399,8 +447,8 @@ void ZepMode_Standard::AddKeyPress(uint32_t key, uint32_t modifierKeys)
     {
         buffer.SetSelection(BufferRange{m_visualBegin, m_visualEnd});
     }
-    */
 }
+*/
 
 
 } // namespace Zep

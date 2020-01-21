@@ -134,9 +134,9 @@ void ZepWindow::UpdateAirline()
     m_airline.rightBoxes.push_back(AirBox{ std::to_string(m_pBuffer->GetLineEnds().size()) + " Lines", m_pBuffer->GetTheme().GetColor(ThemeColor::LineNumberBackground) });
 }
 
-void ZepWindow::SetCursorType(CursorType mode)
+void ZepWindow::SetCursorType(CursorType currentMode)
 {
-    m_cursorType = mode;
+    m_cursorType = currentMode;
     GetEditor().ResetCursorTimer();
 }
 
