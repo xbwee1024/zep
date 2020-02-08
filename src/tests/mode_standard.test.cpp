@@ -317,8 +317,8 @@ TEST_F(StandardTest, BACKSPACE)
                 mod = 0;                                      \
             }                                                 \
         }                                                     \
-        ASSERT_EQ(spMode->GetVisualRange().x, start);         \
-        ASSERT_EQ(spMode->GetVisualRange().y, end);           \
+        ASSERT_EQ(spMode->GetNormalizedVisualRange().x, start);         \
+        ASSERT_EQ(spMode->GetNormalizedVisualRange().y, end);           \
     }
 
 CURSOR_TEST(motion_right, "one two", "%r", 1, 0);
@@ -331,6 +331,8 @@ CURSOR_TEST(motion_right_word, "one two", "%c%r", 4, 0);
 CURSOR_TEST(motion_right_twice_word, "one two", "%c%r%c%r", 7, 0);
 CURSOR_TEST(motion_right_twice_back_word, "one two", "%c%r%c%r%c%l", 4, 0);
 CURSOR_TEST(motion_left_word, "one two", "%r%r%r%r%c%l", 0, 0);
+
+CURSOR_TEST(paste_over_cursor_after, "one", "%c%s%r%cc%cv", 3, 0);
 
 // Visual Range selection
 VISUAL_TEST(visual_shift_right, "one two", "%c%s%r", 0, 4);

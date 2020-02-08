@@ -95,14 +95,16 @@ enum
 {
     None = 0,
     HandledCount = (1 << 2), // Command implements the count, no need to recall it.
-    NeedMoreChars
+    NeedMoreChars = (1 << 3),
+    BeginUndoGroup = (1 << 4)
 };
 } // CommandResultFlags
 
 struct CommandResult
 {
-    uint32_t flags = CommandResultFlags::None;
+    uint32_t flags = CommandResultFlags::BeginUndoGroup;
     EditorMode modeSwitch = EditorMode::None;
+    bool beginUndoGroup = false;
     std::shared_ptr<ZepCommand> spCommand;
 };
 
@@ -183,7 +185,7 @@ public:
 
     virtual ZepWindow* GetCurrentWindow() const;
 
-    virtual NVec2i GetVisualRange() const;
+    virtual NVec2i GetNormalizedVisualRange() const;
 
     virtual const std::string& GetLastCommand() const;
     virtual bool GetCommand(CommandContext& context);
@@ -192,7 +194,6 @@ public:
     virtual bool GetOperationRange(const std::string& op, EditorMode currentMode, BufferLocation& beginRange, BufferLocation& endRange) const;
 
     virtual void UpdateVisualSelection();
-
 
 protected:
     virtual void SwitchMode(EditorMode currentMode);
@@ -224,6 +225,8 @@ protected:
     BufferLocation m_exCommandStartLocation = 0;
     bool m_pendingEscape = false;
     ModeSettings m_settings;
+
+    CursorType m_visualCursorType = CursorType::Visual;
 };
 
 } // namespace Zep

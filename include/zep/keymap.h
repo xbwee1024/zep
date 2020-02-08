@@ -13,6 +13,7 @@ class ZepMode;
 #define DECLARE_COMMANDID(name) const StringId id_##name(#name);
 
 DECLARE_COMMANDID(YankLine)
+DECLARE_COMMANDID(Yank)
 
 DECLARE_COMMANDID(NormalMode)
 DECLARE_COMMANDID(VisualMode)
@@ -84,10 +85,6 @@ DECLARE_COMMANDID(MotionUp)
 DECLARE_COMMANDID(MotionLeft)
 DECLARE_COMMANDID(MotionRight)
 
-DECLARE_COMMANDID(MotionStandardDown)
-DECLARE_COMMANDID(MotionStandardUp)
-DECLARE_COMMANDID(MotionStandardLeft)
-DECLARE_COMMANDID(MotionStandardRight)
 
 DECLARE_COMMANDID(MotionWord)
 DECLARE_COMMANDID(MotionBackWord)
@@ -110,6 +107,25 @@ DECLARE_COMMANDID(MotionGotoLine)
 DECLARE_COMMANDID(PreviousTabWindow)
 DECLARE_COMMANDID(NextTabWindow)
 
+// Standard mode commands
+DECLARE_COMMANDID(StandardCopy)
+DECLARE_COMMANDID(StandardPaste)
+
+DECLARE_COMMANDID(MotionStandardDown)
+DECLARE_COMMANDID(MotionStandardUp)
+DECLARE_COMMANDID(MotionStandardLeft)
+DECLARE_COMMANDID(MotionStandardRight)
+
+DECLARE_COMMANDID(MotionStandardLeftWord)
+DECLARE_COMMANDID(MotionStandardRightWord)
+
+DECLARE_COMMANDID(MotionStandardLeftSelect)
+DECLARE_COMMANDID(MotionStandardRightSelect)
+DECLARE_COMMANDID(MotionStandardUpSelect)
+DECLARE_COMMANDID(MotionStandardDownSelect)
+
+DECLARE_COMMANDID(MotionStandardLeftWordSelect)
+DECLARE_COMMANDID(MotionStandardRightWordSelect)
 
 // Insert Mode
 DECLARE_COMMANDID(Backspace)

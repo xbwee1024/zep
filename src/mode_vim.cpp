@@ -91,6 +91,11 @@ void ZepMode_Vim::Init()
 
     // Normal and Visual
     keymap_add({ &m_normalMap, &m_visualMap }, { "Y" }, id_YankLine);
+    keymap_add({ &m_normalMap }, { "yy" }, id_YankLine);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "p" }, id_PasteAfter);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "P" }, id_PasteBefore);
+
+    keymap_add({ &m_normalMap, &m_visualMap }, { "y" }, id_Yank);
     keymap_add({ &m_normalMap, &m_visualMap }, { "x", "<Del>" }, id_Delete);
     keymap_add({ &m_normalMap, &m_visualMap }, { "J" }, id_JoinLines);
 

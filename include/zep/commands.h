@@ -37,10 +37,10 @@ protected:
     BufferLocation m_cursorAfter = -1;
 };
 
-class ZepCommand_BeginGroup : public ZepCommand
+class ZepCommand_GroupMarker : public ZepCommand
 {
 public:
-    ZepCommand_BeginGroup(ZepBuffer& currentMode) : ZepCommand(currentMode) {}
+    ZepCommand_GroupMarker(ZepBuffer& currentMode) : ZepCommand(currentMode) {}
     virtual void Redo() override {};
     virtual void Undo() override {};
 };

@@ -329,7 +329,7 @@ void ZepMode::SwitchMode(EditorMode currentMode)
         break;
     case EditorMode::Visual:
     {
-        pWindow->SetCursorType(CursorType::Visual);
+        pWindow->SetCursorType(m_visualCursorType);
         ResetCommand();
         m_pendingEscape = false;
     }
@@ -405,7 +405,7 @@ void ZepMode::HandleMappedInput(const std::string& input)
 
     // Special case, dot command (do last edit again)
     // Dot command is complicated, this is my second attempt at implementing it and is less
-    // complex.  The approach is to store relevent key strokes for the last edit operation, 
+    // complex.  The approach is to store relevent key strokes for the last edit operation,
     // and replay them when the user uses the dot.
     if (m_currentMode == EditorMode::Normal && input[input.size() - 1] == '.')
     {
@@ -470,9 +470,9 @@ void ZepMode::HandleMappedInput(const std::string& input)
         if (spContext->commandResult.spCommand)
         {
             // If not in insert mode, begin the group, because we have started a new operation
-            if (m_currentMode != EditorMode::Insert)
+            if (m_currentMode != EditorMode::Insert || spContext->commandResult.beginUndoGroup)
             {
-                AddCommand(std::make_shared<ZepCommand_BeginGroup>(spContext->buffer));
+                AddCommand(std::make_shared<ZepCommand_GroupMarker>(spContext->buffer));
 
                 // Record for the dot command
                 m_dotCommand = m_currentCommand;
@@ -492,7 +492,7 @@ void ZepMode::HandleMappedInput(const std::string& input)
             // remember the dot command that did it
             if (enteringMode(EditorMode::Insert))
             {
-                AddCommand(std::make_shared<ZepCommand_BeginGroup>(spContext->buffer));
+                AddCommand(std::make_shared<ZepCommand_GroupMarker>(spContext->buffer));
                 m_dotCommand = m_currentCommand;
             }
         }
@@ -517,10 +517,12 @@ void ZepMode::HandleMappedInput(const std::string& input)
         }
 
         // Back from insert will mean we end the undo group
+        /*
         if (enteringMode(EditorMode::Normal))
         {
             AddCommand(std::make_shared<ZepCommand_EndGroup>(spContext->buffer));
         }
+        */
 
         // A mode to switch to after the command is done
         SwitchMode(spContext->commandResult.modeSwitch);
@@ -580,6 +582,15 @@ void ZepMode::AddCommand(std::shared_ptr<ZepCommand> spCmd)
 
 void ZepMode::Redo()
 {
+    if (m_redoStack.empty())
+        return;
+
+    if (std::dynamic_pointer_cast<ZepCommand_GroupMarker>(m_redoStack.top()) != nullptr)
+    {
+        m_undoStack.push(m_redoStack.top());
+        m_redoStack.pop();
+    }
+
     while (!m_redoStack.empty())
     {
         auto& spCommand = m_redoStack.top();
@@ -593,7 +604,7 @@ void ZepMode::Redo()
         m_undoStack.push(spCommand);
         m_redoStack.pop();
 
-        if (std::dynamic_pointer_cast<ZepCommand_EndGroup>(spCommand) != nullptr)
+        if (std::dynamic_pointer_cast<ZepCommand_GroupMarker>(spCommand) != nullptr)
         {
             break;
         }
@@ -602,6 +613,15 @@ void ZepMode::Redo()
 
 void ZepMode::Undo()
 {
+    if (m_undoStack.empty())
+        return;
+
+    if (std::dynamic_pointer_cast<ZepCommand_GroupMarker>(m_undoStack.top()) != nullptr)
+    {
+        m_redoStack.push(m_undoStack.top());
+        m_undoStack.pop();
+    }
+
     while (!m_undoStack.empty())
     {
         auto& spCommand = m_undoStack.top();
@@ -615,16 +635,24 @@ void ZepMode::Undo()
         m_redoStack.push(spCommand);
         m_undoStack.pop();
 
-        if (std::dynamic_pointer_cast<ZepCommand_BeginGroup>(spCommand) != nullptr)
+        if (std::dynamic_pointer_cast<ZepCommand_GroupMarker>(spCommand) != nullptr)
         {
             break;
         }
     };
 }
 
-NVec2i ZepMode::GetVisualRange() const
+NVec2i ZepMode::GetNormalizedVisualRange() const
 {
-    return NVec2i(m_visualBegin, m_visualEnd);
+    auto& buffer = GetCurrentWindow()->GetBuffer();
+    // Clamp and orient the correct way around
+    auto startOffset = buffer.Clamp(m_visualBegin);
+    auto endOffset = buffer.Clamp(m_visualEnd);
+    if (startOffset > endOffset)
+    {
+        std::swap(startOffset, endOffset);
+    }
+    return NVec2i(startOffset, endOffset);
 }
 
 const std::string& ZepMode::GetLastCommand() const
@@ -680,7 +708,7 @@ bool ZepMode::GetCommand(CommandContext& context)
 
     if (mappedCommand == id_NormalMode)
     {
-        // TODO: I think this should be a 'command' which would get replayed with dot; 
+        // TODO: I think this should be a 'command' which would get replayed with dot;
         // instead of special casing it later, we could just insert it into the stream of commands
         context.commandResult.modeSwitch = EditorMode::Normal;
         return true;
@@ -887,20 +915,102 @@ bool ZepMode::GetCommand(CommandContext& context)
     else if (mappedCommand == id_MotionStandardRight)
     {
         GetCurrentWindow()->SetBufferCursor(bufferCursor + 1);
-        GetEditor().ResetCursorTimer();
+        return true;
     }
     else if (mappedCommand == id_MotionStandardLeft)
     {
         GetCurrentWindow()->SetBufferCursor(bufferCursor - 1);
-        GetEditor().ResetCursorTimer();
+        return true;
     }
     else if (mappedCommand == id_MotionStandardUp)
     {
         GetCurrentWindow()->MoveCursorY(-1, LineLocation::LineCRBegin);
+        return true;
     }
     else if (mappedCommand == id_MotionStandardDown)
     {
         GetCurrentWindow()->MoveCursorY(1, LineLocation::LineCRBegin);
+        return true;
+    }
+    else if (mappedCommand == id_MotionStandardRightSelect)
+    {
+        context.commandResult.modeSwitch = EditorMode::Visual;
+        if (m_currentMode != EditorMode::Visual)
+        {
+            m_visualBegin = GetCurrentWindow()->GetBufferCursor();
+        }
+        GetCurrentWindow()->SetBufferCursor(bufferCursor + 1);
+        UpdateVisualSelection();
+        return true;
+    }
+    else if (mappedCommand == id_MotionStandardLeftSelect)
+    {
+        context.commandResult.modeSwitch = EditorMode::Visual;
+        if (m_currentMode != EditorMode::Visual)
+        {
+            m_visualBegin = GetCurrentWindow()->GetBufferCursor();
+        }
+        GetCurrentWindow()->SetBufferCursor(bufferCursor - 1);
+        UpdateVisualSelection();
+        return true;
+    }
+    else if (mappedCommand == id_MotionStandardUpSelect)
+    {
+        context.commandResult.modeSwitch = EditorMode::Visual;
+        if (m_currentMode != EditorMode::Visual)
+        {
+            m_visualBegin = GetCurrentWindow()->GetBufferCursor();
+        }
+        GetCurrentWindow()->MoveCursorY(-1, LineLocation::LineCRBegin);
+        UpdateVisualSelection();
+        return true;
+    }
+    else if (mappedCommand == id_MotionStandardDownSelect)
+    {
+        context.commandResult.modeSwitch = EditorMode::Visual;
+        if (m_currentMode != EditorMode::Visual)
+        {
+            m_visualBegin = GetCurrentWindow()->GetBufferCursor();
+        }
+        GetCurrentWindow()->MoveCursorY(1, LineLocation::LineCRBegin);
+        UpdateVisualSelection();
+        return true;
+    }
+    else if (mappedCommand == id_MotionStandardRightWord)
+    {
+        auto target = buffer.StandardCtrlMotion(bufferCursor, SearchDirection::Forward);
+        GetCurrentWindow()->SetBufferCursor(target.second);
+        return true;
+    }
+    else if (mappedCommand == id_MotionStandardLeftWord)
+    {
+        auto target = buffer.StandardCtrlMotion(bufferCursor, SearchDirection::Backward);
+        GetCurrentWindow()->SetBufferCursor(target.second);
+        return true;
+    }
+    else if (mappedCommand == id_MotionStandardRightWordSelect)
+    {
+        context.commandResult.modeSwitch = EditorMode::Visual;
+        if (m_currentMode != EditorMode::Visual)
+        {
+            m_visualBegin = GetCurrentWindow()->GetBufferCursor();
+        }
+        auto target = buffer.StandardCtrlMotion(bufferCursor, SearchDirection::Forward);
+        GetCurrentWindow()->SetBufferCursor(target.second);
+        UpdateVisualSelection();
+        return true;
+    }
+    else if (mappedCommand == id_MotionStandardLeftWordSelect)
+    {
+        context.commandResult.modeSwitch = EditorMode::Visual;
+        if (m_currentMode != EditorMode::Visual)
+        {
+            m_visualBegin = GetCurrentWindow()->GetBufferCursor();
+        }
+        auto target = buffer.StandardCtrlMotion(bufferCursor, SearchDirection::Backward);
+        GetCurrentWindow()->SetBufferCursor(target.second);
+        UpdateVisualSelection();
+        return true;
     }
     else if (mappedCommand == id_MotionPageForward)
     {
@@ -1060,8 +1170,9 @@ bool ZepMode::GetCommand(CommandContext& context)
 
         if (m_currentMode == EditorMode::Visual)
         {
-            context.beginRange = m_visualBegin;
-            context.endRange = m_visualEnd;
+            auto range = GetNormalizedVisualRange();
+            context.beginRange = range.x;
+            context.endRange = range.y;
             context.op = CommandOperation::Delete;
             context.commandResult.modeSwitch = EditorMode::Normal;
         }
@@ -1108,10 +1219,92 @@ bool ZepMode::GetCommand(CommandContext& context)
         context.endRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::BeyondLineEnd);
         context.op = CommandOperation::CopyLines;
         context.commandResult.modeSwitch = EditorMode::Normal;
+        context.cursorAfterOverride = context.beginRange;
+    }
+    else if (mappedCommand == id_Yank)
+    {
+        context.registers.push('0');
+        auto range = GetNormalizedVisualRange();
+        context.beginRange = range.x;
+        context.endRange = range.y;
+        // Note: select line wise yank if we started in linewise copy mode
+        context.op = m_lineWise ? CommandOperation::CopyLines : CommandOperation::Copy;
+        context.commandResult.modeSwitch = EditorMode::Normal;
+        context.cursorAfterOverride = context.beginRange;
+    }
+    else if (mappedCommand == id_StandardCopy)
+    {
+        context.registers.push('0');
+        auto range = GetNormalizedVisualRange();
+        context.beginRange = range.x;
+        context.endRange = range.y;
+        context.cursorAfterOverride = context.bufferCursor;
+
+        // Ignore empty copy
+        if (context.beginRange == context.endRange)
+        {
+            return true;
+        }
+
+        // Note: select line wise yank if we started in linewise copy mode
+        context.op = CommandOperation::Copy;
+    }
+    else if (mappedCommand == id_StandardPaste)
+    {
+        if (context.currentMode == EditorMode::Visual)
+        {
+            context.replaceRangeMode = ReplaceRangeMode::Replace;
+            context.op = CommandOperation::Replace;
+            context.pRegister = &GetEditor().GetRegister('"');
+            auto range = GetNormalizedVisualRange();
+            context.beginRange = range.x;
+            context.endRange = range.y;
+            context.cursorAfterOverride = context.beginRange + BufferLocation(context.pRegister->text.length());
+            context.commandResult.modeSwitch = EditorMode::Insert;
+        }
+        else
+        {
+            context.beginRange = context.bufferCursor;
+            context.op = CommandOperation::Insert;
+        }
+        context.commandResult.beginUndoGroup = true;
+    }
+    else if (mappedCommand == id_PasteAfter)
+    {
+        if (!context.pRegister->text.empty())
+        {
+            if (context.pRegister->lineWise)
+            {
+                context.beginRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::BeyondLineEnd);
+                context.cursorAfterOverride = context.beginRange;
+            }
+            else
+            {
+                context.beginRange = context.buffer.LocationFromOffsetByChars(context.bufferCursor, 1, LineLocation::LineCRBegin);
+            }
+            context.op = CommandOperation::Insert;
+        }
+        context.commandResult.beginUndoGroup = true;
+    }
+    else if (mappedCommand == id_PasteBefore)
+    {
+        if (!context.pRegister->text.empty())
+        {
+            if (context.pRegister->lineWise)
+            {
+                context.beginRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineBegin);
+            }
+            else
+            {
+                context.beginRange = context.bufferCursor;
+            }
+            context.op = CommandOperation::Insert;
+        }
+        context.commandResult.beginUndoGroup = true;
     }
     else if (mappedCommand == id_InsertMode)
     {
-        // TODO: I think this should be a 'command' which would get replayed with dot; 
+        // TODO: I think this should be a 'command' which would get replayed with dot;
         // instead of special casing it later, we could just insert it into the stream of commands
         // Then undo/redo would replay the insert operation neatly
         context.commandResult.modeSwitch = EditorMode::Insert;
@@ -1122,8 +1315,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         if (GetOperationRange("iW", context.currentMode, context.beginRange, context.endRange))
         {
             m_visualBegin = context.beginRange;
-            m_visualEnd = context.endRange;
-            GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
+            GetCurrentWindow()->SetBufferCursor(context.endRange - 1);
             UpdateVisualSelection();
             return true;
         }
@@ -1134,8 +1326,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         if (GetOperationRange("iw", context.currentMode, context.beginRange, context.endRange))
         {
             m_visualBegin = context.beginRange;
-            m_visualEnd = context.endRange;
-            GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
+            GetCurrentWindow()->SetBufferCursor(context.endRange - 1);
             UpdateVisualSelection();
             return true;
         }
@@ -1392,68 +1583,6 @@ bool ZepMode::GetCommand(CommandContext& context)
                 context.commandResult.modeSwitch = EditorMode::Insert;
             }
         }
-        else if (context.command == "p")
-        {
-            if (!context.pRegister->text.empty())
-            {
-                if (context.pRegister->lineWise)
-                {
-                    context.beginRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::BeyondLineEnd);
-                    context.cursorAfterOverride = context.beginRange;
-                }
-                else
-                {
-                    context.beginRange = context.buffer.LocationFromOffsetByChars(context.bufferCursor, 1, LineLocation::LineCRBegin);
-                }
-                context.op = CommandOperation::Insert;
-            }
-        }
-        else if (context.command == "P")
-        {
-            if (!context.pRegister->text.empty())
-            {
-                if (context.pRegister->lineWise)
-                {
-                    context.beginRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineBegin);
-                }
-                else
-                {
-                    context.beginRange = context.bufferCursor;
-                }
-                context.op = CommandOperation::Insert;
-            }
-        }
-        else if (context.command[0] == 'y')
-        {
-            if (context.currentMode == EditorMode::Visual)
-            {
-                context.registers.push('0');
-                context.beginRange = m_visualBegin;
-                context.endRange = m_visualEnd;
-                context.commandResult.modeSwitch = EditorMode::Normal;
-                context.op = m_lineWise ? CommandOperation::CopyLines : CommandOperation::Copy;
-            }
-            else if (context.currentMode == EditorMode::Normal)
-            {
-                if (context.command == "y")
-                {
-                    context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
-                }
-                else if (context.command == "yy")
-                {
-                    // Copy the whole line, including the CR
-                    context.registers.push('0');
-                    context.beginRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineBegin);
-                    context.endRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::BeyondLineEnd);
-                    context.op = CommandOperation::CopyLines;
-                }
-            }
-
-            if (context.op == CommandOperation::None)
-            {
-                return false;
-            }
-        }
         else if (context.command[0] == 'a')
         {
             if (m_currentMode == EditorMode::Visual)
@@ -1469,8 +1598,7 @@ bool ZepMode::GetCommand(CommandContext& context)
                         if (GetOperationRange("aW", context.currentMode, context.beginRange, context.endRange))
                         {
                             m_visualBegin = context.beginRange;
-                            m_visualEnd = context.endRange;
-                            GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
+                            GetCurrentWindow()->SetBufferCursor(context.endRange - 1);
                             UpdateVisualSelection();
                             return true;
                         }
@@ -1481,8 +1609,7 @@ bool ZepMode::GetCommand(CommandContext& context)
                         if (GetOperationRange("aw", context.currentMode, context.beginRange, context.endRange))
                         {
                             m_visualBegin = context.beginRange;
-                            m_visualEnd = context.endRange;
-                            GetCurrentWindow()->SetBufferCursor(m_visualEnd - 1);
+                            GetCurrentWindow()->SetBufferCursor(context.endRange - 1);
                             UpdateVisualSelection();
                             return true;
                         }
@@ -1638,8 +1765,8 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
     else if (context.op == CommandOperation::Copy || context.op == CommandOperation::CopyLines)
     {
-        // Copy commands keep the cursor at the beginning
-        GetCurrentWindow()->SetBufferCursor(context.beginRange);
+        // Put the cursor where the command says it should be
+        GetCurrentWindow()->SetBufferCursor(context.cursorAfterOverride);
         return true;
     }
 
@@ -1661,8 +1788,9 @@ bool ZepMode::GetOperationRange(const std::string& op, EditorMode currentMode, B
     {
         if (currentMode == EditorMode::Visual)
         {
-            beginRange = m_visualBegin;
-            endRange = m_visualEnd;
+            auto range = GetNormalizedVisualRange();
+            beginRange = range.x;
+            endRange = range.y;
         }
     }
     else if (op == "line")
@@ -1741,9 +1869,19 @@ void ZepMode::UpdateVisualSelection()
         }
         else
         {
-            m_visualEnd = GetCurrentWindow()->GetBuffer().LocationFromOffsetByChars(GetCurrentWindow()->GetBufferCursor(), 1);
+            // In standard mode, when using an insert cursor, the visual selection stops at the character before the cursor insert point
+            if (m_visualCursorType == CursorType::Insert)
+            {
+                m_visualEnd = GetCurrentWindow()->GetBufferCursor();
+            }
+            else
+            {
+                m_visualEnd = GetCurrentWindow()->GetBuffer().LocationFromOffsetByChars(GetCurrentWindow()->GetBufferCursor(), 1);
+            }
         }
-        GetCurrentWindow()->GetBuffer().SetSelection(BufferRange{ m_visualBegin, m_visualEnd });
+
+        auto range = GetNormalizedVisualRange();
+        GetCurrentWindow()->GetBuffer().SetSelection(BufferRange{ range.x, range.y });
     }
 }
 
