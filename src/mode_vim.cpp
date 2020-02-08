@@ -128,12 +128,19 @@ void ZepMode_Vim::Init()
     keymap_add({ &m_normalMap, &m_visualMap }, { "gE" }, id_MotionBackEndWORD);
     keymap_add({ &m_normalMap, &m_visualMap }, { "gg" }, id_MotionGotoBeginning);
 
+    keymap_add({ &m_visualMap }, { "C" }, id_ChangeLine);
+
     // Not necessary?
     keymap_add({ &m_normalMap, &m_visualMap, &m_insertMap }, { "<Escape>" }, id_NormalMode);
 
     // Visual mode
+    keymap_add(m_visualMap, "aW", id_VisualSelectAWORD);
+    keymap_add(m_visualMap, "aw", id_VisualSelectAWord);
     keymap_add(m_visualMap, "iW", id_VisualSelectInnerWORD);
     keymap_add(m_visualMap, "iw", id_VisualSelectInnerWord);
+    keymap_add(m_visualMap, "d", id_VisualDelete); 
+    keymap_add(m_visualMap, "c", id_VisualChange);
+
 
     // Normal mode only
     keymap_add(m_normalMap, "i", id_InsertMode);
@@ -144,6 +151,34 @@ void ZepMode_Vim::Init()
     keymap_add(m_normalMap, "V", id_VisualLineMode);
     keymap_add(m_normalMap, "v", id_VisualMode);
 
+    keymap_add(m_normalMap, "dw", id_DeleteWord);
+    keymap_add(m_normalMap, "dW", id_DeleteWORD);
+    keymap_add(m_normalMap, "daw", id_DeleteAWord);
+    keymap_add(m_normalMap, "daW", id_DeleteAWORD);
+    keymap_add(m_normalMap, "diw", id_DeleteInnerWord);
+    keymap_add(m_normalMap, "diW", id_DeleteInnerWORD);
+    keymap_add({ &m_normalMap }, { "D", "d$" }, id_DeleteToLineEnd);
+    keymap_add({ &m_normalMap }, { "dd" }, id_DeleteLine);
+
+    keymap_add(m_normalMap, "cw", id_ChangeWord);
+    keymap_add(m_normalMap, "cW", id_ChangeWORD);
+    keymap_add(m_normalMap, "ciw", id_ChangeInnerWord);
+    keymap_add(m_normalMap, "ciW", id_ChangeInnerWORD);
+    keymap_add(m_normalMap, "caw", id_ChangeAWord);
+    keymap_add(m_normalMap, "caW", id_ChangeAWORD);
+    keymap_add({ &m_normalMap }, { "C","c$" }, id_ChangeToLineEnd);
+    keymap_add({ &m_normalMap }, { "cc" }, id_ChangeLine);
+
+    keymap_add(m_normalMap, "S", id_SubstituteLine);
+    keymap_add(m_normalMap, "s", id_Substitute);
+    keymap_add(m_normalMap, "A", id_AppendToLine);
+    keymap_add(m_normalMap, "a", id_Append);
+    keymap_add(m_normalMap, "I", id_InsertAtFirstChar);
+    keymap_add(m_normalMap, ";", id_FindNext);
+
+
+    keymap_add(m_normalMap, "n", id_MotionNextMarker);
+    keymap_add(m_normalMap, "N", id_MotionPreviousMarker);
     keymap_add(m_normalMap, "<F8>", id_MotionNextMarker);
     keymap_add(m_normalMap, "<S-F8>", id_MotionPreviousMarker);
 
@@ -156,7 +191,8 @@ void ZepMode_Vim::Init()
     keymap_add(m_normalMap, "<C-l>", id_MotionRightSplit);
     keymap_add(m_normalMap, "<C-k>", id_MotionUpSplit);
     keymap_add(m_normalMap, "<C-h>", id_MotionLeftSplit);
-
+    keymap_add(m_normalMap, "<Return>", id_MotionNextFirstChar);
+    
     keymap_add({ &m_normalMap }, { "<C-p>", "<C-,>" }, id_QuickSearch);
     keymap_add({ &m_normalMap }, { "<C-r>" }, id_Redo);
     keymap_add({ &m_normalMap }, { "<C-z>", "u" }, id_Undo);
