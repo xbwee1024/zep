@@ -470,7 +470,7 @@ void ZepMode::HandleMappedInput(const std::string& input)
         if (spContext->commandResult.spCommand)
         {
             // If not in insert mode, begin the group, because we have started a new operation
-            if (m_currentMode != EditorMode::Insert || spContext->commandResult.beginUndoGroup)
+            if (m_currentMode != EditorMode::Insert || ZTestFlag(spContext->commandResult.flags, CommandResultFlags::BeginUndoGroup))
             {
                 AddCommand(std::make_shared<ZepCommand_GroupMarker>(spContext->buffer));
 
@@ -694,7 +694,9 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
 
     // Didn't find an immediate match, found a count and there is no other part to the command
-    if (context.currentMode == EditorMode::Normal && mappedCommand == 0 && context.foundCount && context.command.empty())
+    if (context.currentMode == EditorMode::Normal &&
+        mappedCommand == 0 &&
+        context.foundCount && context.command.empty())
     {
         needMoreChars = true;
     }
@@ -1267,7 +1269,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             context.beginRange = context.bufferCursor;
             context.op = CommandOperation::Insert;
         }
-        context.commandResult.beginUndoGroup = true;
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
     }
     else if (mappedCommand == id_PasteAfter)
     {
@@ -1284,7 +1286,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             context.op = CommandOperation::Insert;
         }
-        context.commandResult.beginUndoGroup = true;
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
     }
     else if (mappedCommand == id_PasteBefore)
     {
@@ -1300,7 +1302,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             }
             context.op = CommandOperation::Insert;
         }
-        context.commandResult.beginUndoGroup = true;
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
     }
     else if (mappedCommand == id_InsertMode)
     {
@@ -1331,6 +1333,8 @@ bool ZepMode::GetCommand(CommandContext& context)
             return true;
         }
     }
+    // CM: TODO
+    // These are being moved to mapped commands!
     else if (m_currentMode == EditorMode::Normal || m_currentMode == EditorMode::Visual)
     {
         if (context.command[0] == 'd' || context.command == "D")
@@ -1701,20 +1705,30 @@ bool ZepMode::GetCommand(CommandContext& context)
         {
             return false;
         }
+        // End of mapped command replace block
     }
     else if (m_currentMode == EditorMode::Insert)
     {
         std::string strText = context.fullCommand;
+        bool shouldGroup = ZTestFlag(m_modeFlags, ModeFlags::InsertModeGroupUndo);
         if (strText[0] == ExtKeys::RETURN)
         {
             strText = "\n";
+            ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroup);
         }
         else if (strText[0] == ExtKeys::TAB)
         {
             // 4 spaces, obviously
+            // TODO: Support tabs
             strText = "    ";
+            ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroup);
+        }
+        else if (strText == " ")
+        {
+            ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroup);
         }
         // We are insert mode and didn't find a mapped operation
+        // TODO: Compress inserts so we don't clutter the command buffer
         auto cmd = std::make_shared<ZepCommand_Insert>(
             context.buffer,
             context.bufferCursor, // Start Offset
@@ -1737,6 +1751,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             context.endRange,
             context.bufferCursor);
         context.commandResult.spCommand = std::static_pointer_cast<ZepCommand>(cmd);
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
         return true;
     }
     else if (context.op == CommandOperation::Insert && !context.pRegister->text.empty())
@@ -1748,6 +1763,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             context.bufferCursor,
             context.cursorAfterOverride);
         context.commandResult.spCommand = std::static_pointer_cast<ZepCommand>(cmd);
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
         return true;
     }
     else if (context.op == CommandOperation::Replace && !context.pRegister->text.empty())
@@ -1761,6 +1777,7 @@ bool ZepMode::GetCommand(CommandContext& context)
             context.bufferCursor,
             context.cursorAfterOverride);
         context.commandResult.spCommand = std::static_pointer_cast<ZepCommand>(cmd);
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
         return true;
     }
     else if (context.op == CommandOperation::Copy || context.op == CommandOperation::CopyLines)

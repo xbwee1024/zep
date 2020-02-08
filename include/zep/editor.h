@@ -56,6 +56,11 @@ struct Region;
 
 using utf8 = uint8_t;
 
+// Helpers 
+inline bool ZTestFlag(uint32_t flag, uint32_t value) { return ((flag & value) ? true : false); }
+inline void ZSetFlag(uint32_t& flag, uint32_t value, bool set = true) { if (set) { flag |= value; } }
+inline void ZClearFlag(uint32_t& flag, uint32_t value) { flag &= ~value; }
+
 namespace ZepEditorFlags
 {
 enum

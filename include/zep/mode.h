@@ -89,6 +89,15 @@ enum class CommandOperation
     Paste
 };
 
+namespace ModeFlags
+{
+enum
+{
+    None = (0),
+    InsertModeGroupUndo = (1 << 0)
+};
+}
+
 namespace CommandResultFlags
 {
 enum
@@ -102,9 +111,8 @@ enum
 
 struct CommandResult
 {
-    uint32_t flags = CommandResultFlags::BeginUndoGroup;
+    uint32_t flags = CommandResultFlags::None;
     EditorMode modeSwitch = EditorMode::None;
-    bool beginUndoGroup = false;
     std::shared_ptr<ZepCommand> spCommand;
 };
 
@@ -227,6 +235,7 @@ protected:
     ModeSettings m_settings;
 
     CursorType m_visualCursorType = CursorType::Visual;
+    uint32_t m_modeFlags = ModeFlags::None;
 };
 
 } // namespace Zep
