@@ -140,6 +140,7 @@ void ZepMode_Vim::Init()
     keymap_add(m_visualMap, "iw", id_VisualSelectInnerWord);
     keymap_add(m_visualMap, "d", id_VisualDelete); 
     keymap_add(m_visualMap, "c", id_VisualChange);
+    keymap_add(m_visualMap, "s", id_VisualSubstitute);
 
 
     // Normal mode only

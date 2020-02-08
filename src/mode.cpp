@@ -1488,6 +1488,32 @@ bool ZepMode::GetCommand(CommandContext& context)
             context.commandResult.modeSwitch = EditorMode::Insert;
         }
     }
+    else if (mappedCommand == id_SubstituteLine)
+    {
+        // Delete whole line and go to insert mode
+        context.beginRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineBegin);
+        context.endRange = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineCRBegin);
+        context.op = CommandOperation::Delete;
+        context.commandResult.modeSwitch = EditorMode::Insert;
+    }
+    else if (mappedCommand == id_Substitute)
+    {
+        // Only in visual mode; delete selected block and go to insert mode
+        // Just delete under m_bufferCursor and insert
+        if (GetOperationRange("cursor", context.currentMode, context.beginRange, context.endRange))
+        {
+            context.op = CommandOperation::Delete;
+            context.commandResult.modeSwitch = EditorMode::Insert;
+        }
+    }
+    else if (mappedCommand == id_VisualSubstitute)
+    {
+        if (GetOperationRange("visual", context.currentMode, context.beginRange, context.endRange))
+        {
+            context.op = CommandOperation::Delete;
+            context.commandResult.modeSwitch = EditorMode::Insert;
+        }
+    }
     else if (mappedCommand == id_Append)
     {
         // Cursor append

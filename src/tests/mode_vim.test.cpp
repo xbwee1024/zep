@@ -323,9 +323,9 @@ COMMAND_TEST(change_cc, "one two", "cchellojk", "hello")
 COMMAND_TEST(change_C, "one two", "llChellojk", "onhello")
 COMMAND_TEST(change_d_dollar, "one two", "llc$hellojk", "onhello")
 
-COMMAND_TEST(change_S, "one two", "Shellojk", "hello")
-COMMAND_TEST(change_s, "one two", "lsnlyjk", "onlye two")
-COMMAND_TEST(change_s_visual, "one two", "vllstwo", "two two")
+COMMAND_TEST(Substitute_S, "one two", "Shellojk", "hello")
+COMMAND_TEST(Substitute_s, "one two", "lsnlyjk", "onlye two")
+COMMAND_TEST(Substitute_s_visual, "one two", "vllstwo", "two two")
 
 COMMAND_TEST(unfinished_d, "one two", "d", "one two")
 COMMAND_TEST(unfinished_y, "one two", "y", "one two")
