@@ -194,37 +194,83 @@ void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult&
 {
     auto spCurrent = map.spRoot.get();
 
+#ifdef _DEBUG
     LOG(DEBUG) << "keymap_find: " << strCommand;
-
     std::ostringstream str;
+#endif
+
     auto itrChar = strCommand.begin();
     while (itrChar != strCommand.end())
     {
-        auto search = NextToken(itrChar, strCommand.end());
-        auto itrRoot = spCurrent->children.find(search);
+        std::string token;
+        if (*itrChar == '<')
+        {
+            auto itrStart = itrChar;
+            do 
+            {
+                itrChar++;
+            } while (itrChar != strCommand.end() && *itrChar != '>');
+
+            token = std::string(itrStart, itrChar);
+        }
+        else if (std::isdigit(*itrChar))
+        {
+            auto itrStart = itrChar;
+            do
+            { 
+                itrChar++;
+            } while (itrChar != strCommand.end() && std::isdigit(*itrChar));
+
+            auto digit = std::stoi(std::string(itrStart, itrChar));
+            result.countGroups.push_back(digit);
+            token = std::string("<n>");
+        }
+        else
+        {
+            token = *itrChar++;
+        }
+
+        auto itrRoot = spCurrent->children.find(token);
         if (itrRoot != spCurrent->children.end())
         {
+#ifdef _DEBUG
             str << "/" << itrRoot->first;
             if (itrRoot->second->commandId != 0)
                 str << " (" << itrRoot->second->commandId.ToString() << ")";
-
+#endif
             spCurrent = itrRoot->second.get();
         }
         else
         {
             // Not found?
             result.needMoreChars = false;
+#ifdef _DEBUG
             LOG(DEBUG) << str.str();
+#endif
             return;
         }
     }
+
     if (spCurrent != map.spRoot.get() && !spCurrent->children.empty())
     {
         result.needMoreChars = true;
     }
+
+    // Calculate the total count
+    if (!result.countGroups.empty())
+    {
+        result.totalCount = 1;
+        for (auto& g : result.countGroups)
+        {
+            result.totalCount *= g;
+        }
+
+    }
     result.foundMapping = spCurrent->commandId;
             
+#ifdef _DEBUG
     LOG(DEBUG) << str.str();
+#endif
 }
 
 } // namespace Zep

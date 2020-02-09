@@ -96,7 +96,7 @@ void ZepMode_Vim::Init()
     keymap_add({ &m_normalMap, &m_visualMap }, { "P" }, id_PasteBefore);
 
     keymap_add({ &m_normalMap, &m_visualMap }, { "y" }, id_Yank);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "x", "<Del>" }, id_Delete);
+    keymap_add({ &m_normalMap, &m_visualMap }, { "<n>x", "<Del>" }, id_Delete);
     keymap_add({ &m_normalMap, &m_visualMap }, { "J" }, id_JoinLines);
 
     // Motions
