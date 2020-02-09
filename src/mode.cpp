@@ -243,6 +243,8 @@ void ZepMode::SwitchMode(EditorMode currentMode)
         m_exCommandStartLocation = cursor;
         pWindow->SetCursorType(CursorType::Hidden);
         m_pendingEscape = false;
+        // Ensure we show the command at the bottom 
+        GetEditor().SetCommandText(m_currentCommand);
     }
     break;
     default:
@@ -345,6 +347,8 @@ void ZepMode::AddKeyPress(uint32_t key, uint32_t modifierKeys)
         return;
     }
 
+    m_lastKey = key;
+
     // Get the new command by parsing out the keys
     // We convert CTRL + f to a string: "<C-f>"
     HandleMappedInput(ConvertInputToMapString(key, modifierKeys));
@@ -388,12 +392,6 @@ void ZepMode::HandleMappedInput(const std::string& input)
     // Reset command text - it may get updated later.
     GetEditor().SetCommandText("");
 
-    // Ex mode, or show chars mode, we display the text typed
-    if (m_currentMode == EditorMode::Ex || m_settings.ShowNormalModeKeyStrokes)
-    {
-        GetEditor().SetCommandText(m_currentCommand);
-    }
-
     // Figure out the command we have typed. foundCommand means that the command was interpreted and understood.
     // If spCommand is returned, then there is an atomic command operation that needs to be done.
     auto spContext = std::make_shared<CommandContext>(m_currentCommand, *this, m_currentMode);
@@ -410,7 +408,7 @@ void ZepMode::HandleMappedInput(const std::string& input)
 
     // Escape Nukes the current command - we handle it in the keyboard mappings after that
     // TODO: This feels awkward
-    if (input[input.size() - 1] == ExtKeys::ESCAPE)
+    if (m_lastKey == ExtKeys::ESCAPE)
     {
         m_currentCommand.clear();
     }
@@ -629,6 +627,8 @@ bool ZepMode::GetCommand(CommandContext& context)
             ResetCommand();
             return true;
         }
+        GetEditor().SetCommandText(m_currentCommand);
+
         return false;
     }
 
@@ -1784,23 +1784,33 @@ bool ZepMode::HandleExCommand(std::string strCommand)
     if (strCommand.empty())
         return false;
 
-    if (strCommand[strCommand.size() - 1] == ExtKeys::BACKSPACE)
+    auto eraseExtKey = [](std::string& str)
     {
-        // Remove the backspace
-        m_currentCommand.pop_back();
+        auto pos = str.find_last_of('<');
+        if (pos != std::string::npos)
+        {
+            str.erase(pos, str.size() - pos);
+        }
+    };
+
+    if (m_lastKey == ExtKeys::BACKSPACE)
+    {
+        eraseExtKey(strCommand);
 
         // Remove the previous character
-        if (!m_currentCommand.empty())
-            m_currentCommand.pop_back();
+        if (!strCommand.empty())
+            strCommand.pop_back();
 
-        if (m_currentCommand.empty())
+        if (strCommand.empty())
         {
             GetEditor().GetActiveTabWindow()->GetActiveWindow()->SetBufferCursor(m_exCommandStartLocation);
             return true;
         }
+
+        m_currentCommand = strCommand;
         return false;
     }
-    if (strCommand[strCommand.size() - 1] == ExtKeys::RETURN)
+    if (m_lastKey == ExtKeys::RETURN)
     {
         auto pWindow = GetEditor().GetActiveTabWindow()->GetActiveWindow();
         auto& buffer = pWindow->GetBuffer();
@@ -1813,7 +1823,7 @@ bool ZepMode::HandleExCommand(std::string strCommand)
         }
 
         // Remove the return
-        strCommand = strCommand.substr(0, strCommand.length() - 1);
+        eraseExtKey(strCommand);
         if (strCommand == "")
         {
             return false;

@@ -227,6 +227,7 @@ protected:
 
     CursorType m_visualCursorType = CursorType::Visual;
     uint32_t m_modeFlags = ModeFlags::None;
+    uint32_t m_lastKey = 0;
 };
 
 } // namespace Zep
