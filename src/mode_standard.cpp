@@ -48,6 +48,8 @@ void ZepMode_Standard::Init()
     
     // Insert Mode
     keymap_add({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
+    keymap_add({ &m_insertMap }, { "<Return>" }, id_InsertCarriageReturn);
+    keymap_add({ &m_insertMap }, { "<Tab>" }, id_InsertTab);
     keymap_add({ &m_insertMap }, { "<Del>" }, id_Delete);
     keymap_add({ &m_insertMap }, { "<C-y>" }, id_Redo);
     keymap_add({ &m_insertMap }, { "<C-z>" }, id_Undo);

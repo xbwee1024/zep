@@ -19,7 +19,8 @@ CommandContext::CommandContext(const std::string& commandIn, ZepMode& md, Editor
     registers.push('"');
     pRegister = &tempReg;
 
-    GetCommandAndCount();
+    keymap_find(owner.GetKeyMappings(currentMode), fullCommand, keymap);
+
     GetCommandRegisters();
 }
 
@@ -41,7 +42,7 @@ void CommandContext::UpdateRegisters()
         std::string str = std::string(buffer.GetText().begin() + beginRange, buffer.GetText().begin() + endRange);
 
         // Delete commands fill up 1-9 registers
-        if (command[0] == 'd' || command[0] == 'D')
+        if (keymap.commandWithoutGroups[0] == 'd' || keymap.commandWithoutGroups[0] == 'D')
         {
             for (int i = 9; i > 1; i--)
             {
@@ -86,116 +87,22 @@ void CommandContext::UpdateRegisters()
     }
 }
 
-// Parse the command into:
-// [count1] opA [count2] opB
-// And generate (count1 * count2), opAopB
-void CommandContext::GetCommandAndCount()
-{
-    std::string count1;
-    std::string command1;
-    std::string count2;
-    std::string command2;
-
-    auto itr = fullCommand.begin();
-    while (itr != fullCommand.end() && std::isdigit((unsigned char)*itr))
-    {
-        count1 += *itr;
-        itr++;
-    }
-
-    // Special case; 'f3' is a find for the character '3', not a count of 3!
-    // But 2f3 is 'find the second 3'....
-    // Same thing for 'r'
-    // I need a key mapper with input patterns to sort this out properly
-    if (itr != fullCommand.end())
-    {
-        if (*itr == 'f' || *itr == 'F' || *itr == 'c' || *itr == 'r')
-        {
-            while (itr != fullCommand.end()
-                && std::isgraph(ToASCII(*itr)))
-            {
-                command1 += *itr;
-                itr++;
-            }
-        }
-        else
-        {
-            while (itr != fullCommand.end() && !std::isdigit(ToASCII(*itr)))
-            {
-                command1 += *itr;
-                itr++;
-            }
-        }
-    }
-
-    // If not a register target, then another count
-    if (command1[0] != '\"' && command1[0] != ':' && command1[0] != '/' && command1[0] != '?')
-    {
-        while (itr != fullCommand.end()
-            && std::isdigit(ToASCII(*itr)))
-        {
-            count2 += *itr;
-            itr++;
-        }
-    }
-
-    // No more counts, pull out the rest of the command
-    while (itr != fullCommand.end())
-    {
-        command2 += *itr;
-        itr++;
-    }
-
-    foundCount = false;
-    count = 1;
-
-    try
-    {
-        if (!count1.empty())
-        {
-            count = std::stoi(count1);
-            foundCount = true;
-        }
-        if (!count2.empty())
-        {
-            // When 2 counts are specified, they multiply!
-            // Such as 2d2d, which deletes 4 lines
-            count *= std::stoi(count2);
-            foundCount = true;
-        }
-    }
-    catch (std::out_of_range&)
-    {
-        // Ignore bad count
-    }
-
-    // Concatentate the parts of the command into a single command string
-    commandWithoutCount = command1 + command2;
-
-    // Short circuit - 0 is special, first on line.  Since we don't want to confuse it
-    // with a command count
-    if (count == 0)
-    {
-        count = 1;
-        commandWithoutCount = "0";
-    }
-}
-
 void CommandContext::GetCommandRegisters()
 {
+    // TODO: Move this to the key mapper
     // Store the register source
-    if (commandWithoutCount[0] == '"' && commandWithoutCount.size() > 2)
+    if (keymap.commandWithoutGroups[0] == '"' && keymap.commandWithoutGroups.size() > 2)
     {
         // Null register
-        if (commandWithoutCount[1] == '_')
+        if (keymap.commandWithoutGroups[1] == '_')
         {
             std::stack<char> temp;
             registers.swap(temp);
         }
         else
         {
-            registers.push(commandWithoutCount[1]);
-            char reg = commandWithoutCount[1];
+            registers.push(keymap.commandWithoutGroups[1]);
+            char reg = keymap.commandWithoutGroups[1];
 
             // Demote capitals to lower registers when pasting (all both)
             if (reg >= 'A' && reg <= 'Z')
@@ -208,7 +115,7 @@ void CommandContext::GetCommandRegisters()
                 pRegister = &owner.GetEditor().GetRegister(reg);
             }
         }
-        command = commandWithoutCount.substr(2);
+        keymap.commandWithoutGroups = keymap.commandWithoutGroups.substr(2);
     }
     else
     {
@@ -217,7 +124,7 @@ void CommandContext::GetCommandRegisters()
         {
             pRegister = &owner.GetEditor().GetRegister('"');
         }
-        command = commandWithoutCount;
+        keymap.commandWithoutGroups = keymap.commandWithoutGroups;
     }
 }
 
@@ -372,11 +279,61 @@ std::string ZepMode::ConvertInputToMapString(uint32_t key, uint32_t modifierKeys
         }
     }
 
-    str << char(key);
+    std::string mapped;
+
+#define COMPARE_STR(a, b) \
+    if (key == b) \
+        mapped = #a;
+
+    COMPARE_STR(Return, ExtKeys::RETURN)
+    COMPARE_STR(Escape, ExtKeys::ESCAPE)
+    COMPARE_STR(Backspace, ExtKeys::BACKSPACE)
+    COMPARE_STR(Left, ExtKeys::LEFT)
+    COMPARE_STR(Right, ExtKeys::RIGHT)
+    COMPARE_STR(Up, ExtKeys::UP)
+    COMPARE_STR(Down, ExtKeys::DOWN)
+    COMPARE_STR(Tab, ExtKeys::TAB)
+    COMPARE_STR(Del, ExtKeys::DEL)
+    COMPARE_STR(Home, ExtKeys::HOME)
+    COMPARE_STR(End, ExtKeys::END)
+    COMPARE_STR(PageDown, ExtKeys::PAGEDOWN)
+    COMPARE_STR(PageUp, ExtKeys::PAGEUP)
+    COMPARE_STR(F1, ExtKeys::F1)
+    COMPARE_STR(F2, ExtKeys::F2)
+    COMPARE_STR(F3, ExtKeys::F3)
+    COMPARE_STR(F4, ExtKeys::F4)
+    COMPARE_STR(F5, ExtKeys::F5)
+    COMPARE_STR(F6, ExtKeys::F6)
+    COMPARE_STR(F7, ExtKeys::F7)
+    COMPARE_STR(F8, ExtKeys::F8)
+    COMPARE_STR(F9, ExtKeys::F9)
+    COMPARE_STR(F10, ExtKeys::F10)
+    COMPARE_STR(F11, ExtKeys::F11)
+    COMPARE_STR(F12, ExtKeys::F12)
+
+    if (!mapped.empty())
+    {
+        if (!closeBracket)
+        {
+            str << "<" << mapped;
+            closeBracket = true;
+        }
+        else
+        {
+            str << mapped;
+        }
+
+    }
+    else
+    {
+        str << std::string((const char*)&key);
+    }
+
     if (closeBracket)
     {
         str << ">";
     }
+
     return str.str();
 }
 
@@ -499,7 +456,7 @@ void ZepMode::HandleMappedInput(const std::string& input)
         if (!(spContext->commandResult.flags & CommandResultFlags::HandledCount))
         {
             // Ignore count == 1, we already did it
-            for (int i = 1; i < spContext->count; i++)
+            for (int i = 1; i < spContext->keymap.totalCount; i++)
             {
                 // May immediate execute and not return a command...
                 // Create a new 'inner' spContext-> for the next command, because we need to re-initialize the command
@@ -544,9 +501,9 @@ void ZepMode::HandleMappedInput(const std::string& input)
         // commands are ignored, as we mostly do.  To add a regex, the keymapper would have to build a tree and 'capture'
         // relevent information, for example for 'f<?graph>' you would capture the char to find
         // In this way, arriving at a tree leaf without a command would easily tell us that we had failed to match a command
-        if ((spContext->commandResult.flags & CommandResultFlags::NeedMoreChars) == 0)
+        if (!spContext->keymap.needMoreChars)
         {
-            if (m_currentMode != EditorMode::Ex && spContext->command[0] != '"')
+            if (m_currentMode != EditorMode::Ex && spContext->keymap.commandWithoutGroups[0] != '"')
             {
                 ResetCommand();
             }
@@ -662,26 +619,11 @@ bool ZepMode::GetCommand(CommandContext& context)
     auto bufferCursor = GetCurrentWindow()->GetBufferCursor();
     auto& buffer = GetCurrentWindow()->GetBuffer();
 
-    bool needMoreChars = false;
-
-    uint32_t mappedCommand = 0;
-    if (m_currentMode == EditorMode::Visual)
-    {
-        mappedCommand = keymap_find(m_visualMap, context.command, needMoreChars);
-    }
-    else if (m_currentMode == EditorMode::Normal)
-    {
-        mappedCommand = keymap_find(m_normalMap, context.command, needMoreChars);
-    }
-    else if (m_currentMode == EditorMode::Insert)
-    {
-        mappedCommand = keymap_find(m_insertMap, context.command, needMoreChars);
-    }
-    else if (m_currentMode == EditorMode::Ex)
+    if (m_currentMode == EditorMode::Ex)
     {
         // TODO: Is it possible extend our key mapping to better process ex commands?  Or are these
         // too specialized?
-        if (HandleExCommand(context.command))
+        if (HandleExCommand(context.fullCommand))
         {
             SwitchMode(EditorMode::Normal);
             ResetCommand();
@@ -691,18 +633,23 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
 
     // Didn't find an immediate match, found a count and there is no other part to the command
-    if (context.currentMode == EditorMode::Normal && mappedCommand == 0 && context.foundCount && context.command.empty())
+    // TODO Remove this when the keymapper is finished - it should be part of it
+    if (context.currentMode == EditorMode::Normal && context.keymap.foundMapping == 0 && !context.keymap.countGroups.empty())
     {
-        needMoreChars = true;
+        context.keymap.needMoreChars = true;
     }
 
     // Found a valid command, but there are more options to come
-    if (needMoreChars)
+    if (context.keymap.needMoreChars)
     {
-        context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
         return false;
     }
 
+    // This flag is for non-modal editors which like to break insertions into undo groups.
+    // Vim, for example, doesn't do that; an insert mode operation is a single 'group'
+    bool shouldGroupInserts = ZTestFlag(m_modeFlags, ModeFlags::InsertModeGroupUndo);
+
+    auto mappedCommand = context.keymap.foundMapping;
     if (mappedCommand == id_NormalMode)
     {
         // TODO: I think this should be a 'command' which would get replayed with dot;
@@ -885,27 +832,27 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
     else if (mappedCommand == id_MotionDown)
     {
-        GetCurrentWindow()->MoveCursorY(context.count);
+        GetCurrentWindow()->MoveCursorY(context.keymap.totalCount);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
     else if (mappedCommand == id_MotionUp)
     {
-        GetCurrentWindow()->MoveCursorY(-context.count);
+        GetCurrentWindow()->MoveCursorY(-context.keymap.totalCount);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
     else if (mappedCommand == id_MotionRight)
     {
         auto lineEnd = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineLastNonCR);
-        GetCurrentWindow()->SetBufferCursor(std::min(context.bufferCursor + context.count, lineEnd));
+        GetCurrentWindow()->SetBufferCursor(std::min(context.bufferCursor + context.keymap.totalCount, lineEnd));
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
     else if (mappedCommand == id_MotionLeft)
     {
         auto lineStart = context.buffer.GetLinePos(context.bufferCursor, LineLocation::LineBegin);
-        GetCurrentWindow()->SetBufferCursor(std::max(context.bufferCursor - context.count, lineStart));
+        GetCurrentWindow()->SetBufferCursor(std::max(context.bufferCursor - context.keymap.totalCount, lineStart));
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
@@ -1013,36 +960,36 @@ bool ZepMode::GetCommand(CommandContext& context)
     {
         // Note: the vim spec says 'visible lines - 2' for a 'page'.
         // We jump the max possible lines, which might hit the end of the text; this matches observed vim behavior
-        GetCurrentWindow()->MoveCursorY((GetCurrentWindow()->GetMaxDisplayLines() - 2) * context.count);
+        GetCurrentWindow()->MoveCursorY((GetCurrentWindow()->GetMaxDisplayLines() - 2) * context.keymap.totalCount);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
     else if (mappedCommand == id_MotionHalfPageForward)
     {
         // Note: the vim spec says 'half visible lines' for up/down
-        GetCurrentWindow()->MoveCursorY((GetCurrentWindow()->GetNumDisplayedLines() / 2) * context.count);
+        GetCurrentWindow()->MoveCursorY((GetCurrentWindow()->GetNumDisplayedLines() / 2) * context.keymap.totalCount);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
     else if (mappedCommand == id_MotionPageBackward)
     {
         // Note: the vim spec says 'visible lines - 2' for a 'page'
-        GetCurrentWindow()->MoveCursorY(-(GetCurrentWindow()->GetMaxDisplayLines() - 2) * context.count);
+        GetCurrentWindow()->MoveCursorY(-(GetCurrentWindow()->GetMaxDisplayLines() - 2) * context.keymap.totalCount);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
     else if (mappedCommand == id_MotionHalfPageBackward)
     {
-        GetCurrentWindow()->MoveCursorY(-(GetCurrentWindow()->GetNumDisplayedLines() / 2) * context.count);
+        GetCurrentWindow()->MoveCursorY(-(GetCurrentWindow()->GetNumDisplayedLines() / 2) * context.keymap.totalCount);
         context.commandResult.flags |= CommandResultFlags::HandledCount;
         return true;
     }
     else if (mappedCommand == id_MotionGotoLine)
     {
-        if (context.foundCount)
+        if (!context.keymap.countGroups.empty())
         {
             // In Vim, 0G means go to end!  1G is the first line...
-            long count = context.count - 1;
+            long count = context.keymap.totalCount - 1;
             count = std::min(context.buffer.GetLineCount() - 1, count);
             if (count < 0)
                 count = context.buffer.GetLineCount() - 1;
@@ -1137,6 +1084,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         context.replaceRangeMode = ReplaceRangeMode::Replace;
 
         context.op = CommandOperation::Replace;
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
     }
     else if (mappedCommand == id_VisualMode || mappedCommand == id_VisualLineMode)
     {
@@ -1177,11 +1125,11 @@ bool ZepMode::GetCommand(CommandContext& context)
         {
             // Don't allow x to delete beyond the end of the line
             // Not sure what/where this is from!
-            if (context.command != "x" || std::isgraph(ToASCII(context.buffer.GetText()[loc])) || std::isblank(ToASCII(context.buffer.GetText()[loc])))
+            if (context.keymap.commandWithoutGroups != "x" || std::isgraph(ToASCII(context.buffer.GetText()[loc])) || std::isblank(ToASCII(context.buffer.GetText()[loc])))
             {
                 context.beginRange = loc;
                 context.endRange = std::min(context.buffer.GetLinePos(loc, LineLocation::LineCRBegin),
-                    context.buffer.LocationFromOffsetByChars(loc, context.count));
+                    context.buffer.LocationFromOffsetByChars(loc, context.keymap.totalCount));
                 context.op = CommandOperation::Delete;
                 context.commandResult.flags |= CommandResultFlags::HandledCount;
             }
@@ -1198,6 +1146,25 @@ bool ZepMode::GetCommand(CommandContext& context)
         context.pRegister = &context.tempReg;
         context.op = CommandOperation::Insert;
         context.commandResult.modeSwitch = EditorMode::Insert;
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
+    }
+    else if (mappedCommand == id_InsertCarriageReturn)
+    {
+        context.beginRange = context.bufferCursor;
+        context.tempReg.text = "\n";
+        context.pRegister = &context.tempReg;
+        context.op = CommandOperation::Insert;
+        context.commandResult.modeSwitch = EditorMode::Insert;
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroupInserts);
+    }
+    else if (mappedCommand == id_InsertTab)
+    {
+        context.beginRange = context.bufferCursor;
+        context.tempReg.text = "    ";
+        context.pRegister = &context.tempReg;
+        context.op = CommandOperation::Insert;
+        context.commandResult.modeSwitch = EditorMode::Insert;
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroupInserts);
     }
     else if (mappedCommand == id_OpenLineAbove)
     {
@@ -1207,6 +1174,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         context.op = CommandOperation::Insert;
         context.commandResult.modeSwitch = EditorMode::Insert;
         context.cursorAfterOverride = context.bufferCursor;
+        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroupInserts);
     }
     else if (mappedCommand == id_YankLine)
     {
@@ -1514,6 +1482,13 @@ bool ZepMode::GetCommand(CommandContext& context)
             context.commandResult.modeSwitch = EditorMode::Insert;
         }
     }
+    else if (mappedCommand == id_Find)
+    {
+        GetCurrentWindow()->SetBufferCursor(context.buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.keymap.commandWithoutGroups[1], SearchDirection::Forward));
+        m_lastFind = context.keymap.commandWithoutGroups[1];
+        m_lastFindDirection = SearchDirection::Forward;
+        return true;
+    }
     else if (mappedCommand == id_Append)
     {
         // Cursor append
@@ -1588,7 +1563,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         {
             context.commandResult.flags |= CommandResultFlags::HandledCount;
 
-            if (!buffer.InsideBuffer(bufferCursor + context.count))
+            if (!buffer.InsideBuffer(bufferCursor + context.keymap.totalCount))
             {
                 // Outside the valid buffer; an invalid replace with count!
                 return true;
@@ -1603,21 +1578,13 @@ bool ZepMode::GetCommand(CommandContext& context)
             if (!GetOperationRange("visual", context.currentMode, context.beginRange, context.endRange))
             {
                 context.beginRange = bufferCursor;
-                context.endRange = buffer.LocationFromOffsetByChars(bufferCursor, context.count);
+                context.endRange = buffer.LocationFromOffsetByChars(bufferCursor, context.keymap.totalCount);
             }
             context.commandResult.modeSwitch = EditorMode::Normal;
         }
     }
     else if (context.command[0] == 'f')
     {
-        if (context.command.length() > 1)
-        {
-            GetCurrentWindow()->SetBufferCursor(context.buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.command[1], SearchDirection::Forward));
-            m_lastFind = context.command[1];
-            m_lastFindDirection = SearchDirection::Forward;
-            return true;
-        }
-        context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
     }
     else if (context.command[0] == 'F')
     {
@@ -1638,34 +1605,17 @@ bool ZepMode::GetCommand(CommandContext& context)
 }*/
     else if (m_currentMode == EditorMode::Insert)
     {
-        std::string strText = context.fullCommand;
-        bool shouldGroup = ZTestFlag(m_modeFlags, ModeFlags::InsertModeGroupUndo);
-        if (strText[0] == ExtKeys::RETURN)
-        {
-            strText = "\n";
-            ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroup);
-        }
-        else if (strText[0] == ExtKeys::TAB)
-        {
-            // 4 spaces, obviously
-            // TODO: Support tabs
-            strText = "    ";
-            ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroup);
-        }
-        else if (strText == " ")
-        {
-            ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroup);
-        }
-        // We are insert mode and didn't find a mapped operation
-        // TODO: Compress inserts so we don't clutter the command buffer
-        auto cmd = std::make_shared<ZepCommand_Insert>(
-            context.buffer,
-            context.bufferCursor, // Start Offset
-            strText, // String
-            context.bufferCursor); // Where the cursor is before
+        context.beginRange = context.bufferCursor;
+        context.tempReg.text = context.fullCommand;
+        context.pRegister = &context.tempReg;
+        context.op = CommandOperation::Insert;
+        context.commandResult.modeSwitch = EditorMode::Insert;
         context.commandResult.flags |= CommandResultFlags::HandledCount;
-        context.commandResult.spCommand = std::static_pointer_cast<ZepCommand>(cmd);
-        return true;
+       
+        if (context.fullCommand == " ")
+        {
+            ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroupInserts);
+        }
     }
 
     // Update the registers based on context state
@@ -1692,7 +1642,6 @@ bool ZepMode::GetCommand(CommandContext& context)
             context.bufferCursor,
             context.cursorAfterOverride);
         context.commandResult.spCommand = std::static_pointer_cast<ZepCommand>(cmd);
-        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
         return true;
     }
     else if (context.op == CommandOperation::Replace && !context.pRegister->text.empty())
@@ -1706,7 +1655,6 @@ bool ZepMode::GetCommand(CommandContext& context)
             context.bufferCursor,
             context.cursorAfterOverride);
         context.commandResult.spCommand = std::static_pointer_cast<ZepCommand>(cmd);
-        ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup);
         return true;
     }
     else if (context.op == CommandOperation::Copy || context.op == CommandOperation::CopyLines)
@@ -2229,6 +2177,19 @@ bool ZepMode::HandleExCommand(std::string strCommand)
         }
     }
     return false;
+}
+    
+const KeyMap& ZepMode::GetKeyMappings(EditorMode mode) const
+{
+    if (mode == EditorMode::Visual)
+    {
+        return m_visualMap;
+    }
+    else if (mode == EditorMode::Normal)
+    {
+        return m_normalMap;
+    }
+    return m_insertMap;
 }
 
 } // namespace Zep

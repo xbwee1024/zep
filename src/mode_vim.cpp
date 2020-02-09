@@ -198,6 +198,8 @@ void ZepMode_Vim::Init()
     keymap_add({ &m_normalMap }, { "<C-r>" }, id_Redo);
     keymap_add({ &m_normalMap }, { "<C-z>", "u" }, id_Undo);
 
+    keymap_add({ &m_normalMap, &m_visualMap }, { "f<.>" }, id_Find);
+
     keymap_add({ &m_normalMap, &m_visualMap }, { ":", "/", "?" }, id_ExMode);
 
     /* Standard mode
@@ -206,7 +208,13 @@ void ZepMode_Vim::Init()
 
     // Insert Mode
     keymap_add({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
+    keymap_add({ &m_insertMap }, { "<Return>" }, id_InsertCarriageReturn);
+    keymap_add({ &m_insertMap }, { "<Tab>" }, id_InsertTab);
     keymap_add({ &m_insertMap }, { "jk" }, id_NormalMode);
+
+    keymap_dump(m_normalMap);
+    keymap_dump(m_visualMap);
+    keymap_dump(m_insertMap);
 }
 
 void ZepMode_Vim::Begin()

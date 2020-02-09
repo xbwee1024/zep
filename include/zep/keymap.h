@@ -20,6 +20,8 @@ DECLARE_COMMANDID(VisualMode)
 DECLARE_COMMANDID(InsertMode)
 DECLARE_COMMANDID(ExMode)
 
+DECLARE_COMMANDID(Find)
+
 DECLARE_COMMANDID(VisualSelectInnerWORD)
 DECLARE_COMMANDID(VisualSubstitute)
 DECLARE_COMMANDID(VisualSelectInnerWord)
@@ -143,12 +145,15 @@ DECLARE_COMMANDID(MotionStandardDownSelect)
 DECLARE_COMMANDID(MotionStandardLeftWordSelect)
 DECLARE_COMMANDID(MotionStandardRightWordSelect)
 
+DECLARE_COMMANDID(InsertCarriageReturn)
+DECLARE_COMMANDID(InsertTab)
+
 // Insert Mode
 DECLARE_COMMANDID(Backspace)
 struct CommandNode
 {
     std::string token;
-    uint32_t commandId;
+    StringId commandId;
     std::unordered_map<std::string, std::shared_ptr<CommandNode>> children;
 };
 
@@ -157,8 +162,21 @@ struct KeyMap
     std::shared_ptr<CommandNode> spRoot = std::make_shared<CommandNode>();
 };
 
-bool keymap_add(const std::vector<KeyMap*>& maps, const std::vector<std::string>& strCommand, uint32_t commandId);
-bool keymap_add(KeyMap& map, const std::string& strCommand, const uint32_t commandId);
-uint32_t keymap_find(KeyMap& map, const std::string& strCommand, bool& needMore);
+struct KeyMapResult
+{
+    std::vector<int> countGroups;
+    std::vector<char> charGroups;
+    std::vector<char> registerName;
+    std::string commandWithoutGroups;
+    bool needMoreChars = false;
+    int totalCount = 1;
+    
+    StringId foundMapping;
+};
+
+bool keymap_add(const std::vector<KeyMap*>& maps, const std::vector<std::string>& strCommand, const StringId& commandId);
+bool keymap_add(KeyMap& map, const std::string& strCommand, const StringId& commandId);
+void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult& result);
+void keymap_dump(const KeyMap& map);
 
 } // namespace Zep

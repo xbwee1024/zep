@@ -12,7 +12,7 @@ namespace Zep
 ExtKeys::Key MapStringToExKey(const std::string& str)
 {
 #define COMPARE(a, b) \
-    if (str == #a)    \
+    if (string_tolower(str) == #a)    \
         return b;
 
     COMPARE(return, ExtKeys::RETURN)
@@ -44,6 +44,12 @@ ExtKeys::Key MapStringToExKey(const std::string& str)
     return ExtKeys::NONE;
 }
 
+// Keyboard mapping strings such as <PageDown> get converted here
+std::string keymap_string(const std::string& str)
+{
+    return str;
+}
+
 // Splitting the input into groups of <> or ch
 std::string NextToken(std::string::const_iterator& itrChar, std::string::const_iterator itrEnd)
 {
@@ -51,10 +57,12 @@ std::string NextToken(std::string::const_iterator& itrChar, std::string::const_i
     // Find a group
     if (*itrChar == '<')
     {
+        str << "<";
+
         bool lastShiftCtrl = true;
         itrChar++;
 
-        // Walk the group
+        // Walk the group, ensuring we consistently output (C-)(S-)foo
         while (itrChar != itrEnd && *itrChar != '>')
         {
             // Handle <c-s-, <C-s-, <C-, <c-, etc.
@@ -86,17 +94,7 @@ std::string NextToken(std::string::const_iterator& itrChar, std::string::const_i
                     while (itrTokenEnd != itrEnd && std::isalpha(*itrTokenEnd))
                         itrTokenEnd++;
 
-                    auto tok = string_tolower(std::string(itrChar, itrTokenEnd));
-                    auto key = MapStringToExKey(tok);
-                    if (key != ExtKeys::NONE)
-                    {
-                        str << (char)key;
-                    }
-                    else
-                    {
-                        // Just a random char/string, not a special character
-                        str << tok;
-                    }
+                    str << std::string(itrChar, itrTokenEnd);
                     itrChar = itrTokenEnd;
                 }
                 else
@@ -108,6 +106,7 @@ std::string NextToken(std::string::const_iterator& itrChar, std::string::const_i
         }
         if (itrChar != itrEnd && *itrChar == '>')
             itrChar++;
+        str << ">";
     }
     else
     {
@@ -119,7 +118,7 @@ std::string NextToken(std::string::const_iterator& itrChar, std::string::const_i
 }
 
 // Add a collection of commands to a collection of mappings
-bool keymap_add(const std::vector<KeyMap*>& maps, const std::vector<std::string>& commands, uint32_t commandId)
+bool keymap_add(const std::vector<KeyMap*>& maps, const std::vector<std::string>& commands, const StringId& commandId)
 {
     bool ret = true;
     for (auto& map : maps)
@@ -133,7 +132,7 @@ bool keymap_add(const std::vector<KeyMap*>& maps, const std::vector<std::string>
     return ret;
 }
 
-bool keymap_add(KeyMap& map, const std::string& strCommand, uint32_t commandId)
+bool keymap_add(KeyMap& map, const std::string& strCommand, const StringId& commandId)
 {
     auto spCurrent = map.spRoot;
 
@@ -166,23 +165,36 @@ bool keymap_add(KeyMap& map, const std::string& strCommand, uint32_t commandId)
     return true;
 }
 
+void keymap_dump(const KeyMap& map)
+{
+#ifdef _DEBUG 
+    std::function<void(std::shared_ptr<CommandNode>, int)> fnDump;
+    fnDump = [&](std::shared_ptr<CommandNode> node, int depth) {
+        std::ostringstream str;
+        for (int i = 0; i < depth; i++)
+        {
+            str << " ";
+        }
+        str << node->token;
+        if (node->commandId != 0)
+            str << " : " << node->commandId.ToString();
+        LOG(DEBUG) << str.str();
+
+        for (auto& child : node->children)
+        {
+            fnDump(child.second, depth + 2);
+        }
+    };
+    fnDump(map.spRoot, 0);
+#endif
+}
+
 // Walk the tree of tokens, figuring out which command this is
-uint32_t keymap_find(KeyMap& map, const std::string& strCommand, bool& needMore)
+void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult& result)
 {
     auto spCurrent = map.spRoot.get();
 
-#ifdef _DEBUG
-    std::ostringstream strDebugOut;
-    for (auto& ch : strCommand)
-    {
-        if (ch < ' ')
-        {
-            strDebugOut << "\\x" << (int)(ch);
-        }
-        strDebugOut << ch;
-    }
-    LOG(DEBUG) << "keymap_find: " << strDebugOut.str();
-#endif
+    LOG(DEBUG) << "keymap_find: " << strCommand;
 
     std::ostringstream str;
     auto itrChar = strCommand.begin();
@@ -192,20 +204,27 @@ uint32_t keymap_find(KeyMap& map, const std::string& strCommand, bool& needMore)
         auto itrRoot = spCurrent->children.find(search);
         if (itrRoot != spCurrent->children.end())
         {
+            str << "/" << itrRoot->first;
+            if (itrRoot->second->commandId != 0)
+                str << " (" << itrRoot->second->commandId.ToString() << ")";
+
             spCurrent = itrRoot->second.get();
         }
         else
         {
             // Not found?
-            needMore = false;
-            return 0;
+            result.needMoreChars = false;
+            LOG(DEBUG) << str.str();
+            return;
         }
     }
     if (spCurrent != map.spRoot.get() && !spCurrent->children.empty())
     {
-        needMore = true;
+        result.needMoreChars = true;
     }
-    return spCurrent->commandId;
+    result.foundMapping = spCurrent->commandId;
+            
+    LOG(DEBUG) << str.str();
 }
 
 } // namespace Zep

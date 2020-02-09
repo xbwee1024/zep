@@ -104,7 +104,6 @@ enum
 {
     None = 0,
     HandledCount = (1 << 2), // Command implements the count, no need to recall it.
-    NeedMoreChars = (1 << 3),
     BeginUndoGroup = (1 << 4)
 };
 } // CommandResultFlags
@@ -121,16 +120,13 @@ class CommandContext
 public:
     CommandContext(const std::string& commandIn, ZepMode& md, EditorMode editorMode);
 
-    // Parse the command into:
-    // [count1] opA [count2] opB
-    // And generate (count1 * count2), opAopB
-    void GetCommandAndCount();
     void GetCommandRegisters();
     void UpdateRegisters();
 
     ZepMode& owner;
 
-    std::string command;
+    std::string fullCommand;
+    KeyMapResult keymap;
 
     ReplaceRangeMode replaceRangeMode = ReplaceRangeMode::Fill;
     BufferLocation beginRange{-1};
@@ -148,21 +144,14 @@ public:
 
     // Input State
     EditorMode currentMode = EditorMode::None;
-    int count = 1;
-    bool foundCount = false;
 
     // Output result
     CommandResult commandResult;
     CommandOperation op = CommandOperation::None;
 
-    // Did we get a command?
     bool foundCommand = false;
-   
-    std::string fullCommand;        // The supplied command without stripping
-
-private:
-    std::string commandWithoutCount;// The command with count stripped
 };
+
 class ZepMode : public ZepComponent
 {
 public:
@@ -202,6 +191,8 @@ public:
     virtual bool GetOperationRange(const std::string& op, EditorMode currentMode, BufferLocation& beginRange, BufferLocation& endRange) const;
 
     virtual void UpdateVisualSelection();
+
+    const KeyMap& GetKeyMappings(EditorMode mode) const;
 
 protected:
     virtual void SwitchMode(EditorMode currentMode);
