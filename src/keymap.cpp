@@ -219,7 +219,7 @@ void FindCounts(std::string& input, const KeyMap& map, KeyMapResult& res)
 void FindRegisters(std::string& input, const KeyMap& map, KeyMapResult& res)
 {
     // First map the groups
-    for (auto& g : map.m_countGroups)
+    for (auto& g : map.m_registerGroups)
     {
         std::smatch match;
         while (std::regex_search(input, match, g))

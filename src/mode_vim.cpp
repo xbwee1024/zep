@@ -217,8 +217,8 @@ void ZepMode_Vim::Init()
     keymap_vim({ &m_insertMap }, { "jk" }, id_NormalMode);
 
     std::regex countGroup(R"((\d+)(?:$|\w)+)");
-    std::regex registerGroup(R"((?:^\d*)(\"\w+))");
-    std::regex unfinishedGroup(R"(^\d*\"*$)");
+    std::regex registerGroup(R"((?:^\d*)("\w))");
+    std::regex unfinishedGroup(R"(^\d*"*$)");
     
     m_normalMap.m_countGroups.push_back(countGroup);
     m_normalMap.m_registerGroups.push_back(registerGroup);
