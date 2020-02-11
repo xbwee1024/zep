@@ -1,8 +1,8 @@
-#include <string>
 #include <algorithm>
 #include <cassert>
-#include <locale>
 #include <cstring>
+#include <locale>
+#include <string>
 
 #include <codecvt>
 
@@ -20,8 +20,7 @@ std::unordered_map<uint32_t, std::string>& StringId::GetStringLookup()
 std::string string_tolower(const std::string& str)
 {
     std::string copy = str;
-    std::transform(copy.begin(), copy.end(), copy.begin(), [](char ch)
-    {
+    std::transform(copy.begin(), copy.end(), copy.begin(), [](char ch) {
         return (char)::tolower(int(ch));
     });
     return copy;
@@ -99,13 +98,13 @@ uint32_t murmur_hash(const void* key, int len, uint32_t seed)
 
     switch (len)
     {
-        case 3:
-            h ^= data[2] << 16;
-        case 2:
-            h ^= data[1] << 8;
-        case 1:
-            h ^= data[0];
-            h *= m;
+    case 3:
+        h ^= data[2] << 16;
+    case 2:
+        h ^= data[1] << 8;
+    case 1:
+        h ^= data[0];
+        h *= m;
     };
 
     // Do a few final mixes of the hash to ensure the last few
@@ -203,21 +202,21 @@ uint64_t murmur_hash_64(const void* key, uint32_t len, uint64_t seed)
 
     switch (len & 7)
     {
-        case 7:
-            h ^= uint64_t(data2[6]) << 48;
-        case 6:
-            h ^= uint64_t(data2[5]) << 40;
-        case 5:
-            h ^= uint64_t(data2[4]) << 32;
-        case 4:
-            h ^= uint64_t(data2[3]) << 24;
-        case 3:
-            h ^= uint64_t(data2[2]) << 16;
-        case 2:
-            h ^= uint64_t(data2[1]) << 8;
-        case 1:
-            h ^= uint64_t(data2[0]);
-            h *= m;
+    case 7:
+        h ^= uint64_t(data2[6]) << 48;
+    case 6:
+        h ^= uint64_t(data2[5]) << 40;
+    case 5:
+        h ^= uint64_t(data2[4]) << 32;
+    case 4:
+        h ^= uint64_t(data2[3]) << 24;
+    case 3:
+        h ^= uint64_t(data2[2]) << 16;
+    case 2:
+        h ^= uint64_t(data2[1]) << 8;
+    case 1:
+        h ^= uint64_t(data2[0]);
+        h *= m;
     };
 
     h ^= h >> r;
@@ -328,6 +327,45 @@ void string_split_lines(const std::string& text, std::vector<std::string>& split
 {
     string_split(text, "\r\n", split);
 }
+
+std::string string_slurp_if(const std::string& str, std::string::const_iterator& itr, char first, char last)
+{
+    auto itrCurrent = itr;
+    if (*itrCurrent == first)
+    {
+        while (itrCurrent != str.end() && *itrCurrent != last)
+        {
+            itrCurrent++;
+        }
+
+        if (itrCurrent != str.end() && *itrCurrent == last)
+        {
+            itrCurrent++;
+            auto ret = std::string(itr, itrCurrent);
+            itr = itrCurrent;
+            return ret;
+        }
+    }
+    return "";
+}
+
+std::string string_slurp_if(const std::string& str, std::string::const_iterator& itr, std::function<bool(char)> fnIs)
+{
+    auto itrCurrent = itr;
+    while (itrCurrent != str.end() && fnIs(*itrCurrent))
+    {
+        itrCurrent++;
+    }
+
+    if (itrCurrent != itr)
+    {
+        auto ret = std::string(itr, itrCurrent);
+        itr = itrCurrent;
+
+        return ret;
+    }
+    return "";
+};
 
 StringId::StringId(const char* pszString)
 {

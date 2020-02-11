@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <string>
+#include <regex>
 
 #include "mcommon/string/stringutils.h"
 
@@ -159,14 +160,16 @@ struct CommandNode
 
 struct KeyMap
 {
+    std::vector<std::regex> m_countGroups;
+    std::vector<std::regex> m_registerGroups;
+    std::vector<std::regex> m_unfinishedGroups;
     std::shared_ptr<CommandNode> spRoot = std::make_shared<CommandNode>();
 };
 
 struct KeyMapResult
 {
     std::vector<int> countGroups;
-    std::vector<char> charGroups;
-    std::vector<char> registerName;
+    char registerName;
     std::string commandWithoutGroups;
     bool needMoreChars = false;
     int totalCount = 1;

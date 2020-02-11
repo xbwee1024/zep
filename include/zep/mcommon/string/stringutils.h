@@ -144,6 +144,16 @@ inline bool string_equals(const std::string& str, const std::string& str2)
 {
     return str == str2;
 }
+
+inline void string_eat_char(const std::string& str, std::string::const_iterator& itr)
+{
+    if (itr != str.end())
+        itr++;
+}
+
+std::string string_slurp_if(const std::string& str, std::string::const_iterator& itr, char first, char last);
+std::string string_slurp_if(const std::string& str, std::string::const_iterator& itr, std::function<bool(char)> fnIs);
+
 } // namespace Zep
 
 namespace std

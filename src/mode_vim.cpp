@@ -89,132 +89,145 @@ void ZepMode_Vim::Init()
     // Later, we will be able to read these from a file.
     // But keymaps are useful for overriding behavior in modes too
 
-    // Normal and Visual
-    keymap_add({ &m_normalMap, &m_visualMap }, { "Y" }, id_YankLine);
-    keymap_add({ &m_normalMap }, { "yy" }, id_YankLine);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "p" }, id_PasteAfter);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "P" }, id_PasteBefore);
+    //(?:(\d*)|(<\S>*)|("\w)?)*(\S)
+    auto keymap_vim = [](const std::vector<KeyMap*>& maps, const std::vector<std::string>& commands, const StringId& id)
+    {
+        keymap_add(maps, commands, id);
+    };
 
-    keymap_add({ &m_normalMap, &m_visualMap }, { "y" }, id_Yank);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "<n>x", "<Del>" }, id_Delete);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "J" }, id_JoinLines);
+    // Normal and Visual
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "Y" }, id_YankLine);
+    keymap_vim({ &m_normalMap }, { "yy" }, id_YankLine);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "p" }, id_PasteAfter);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "P" }, id_PasteBefore);
+
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "y" }, id_Yank);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "x", "<Del>" }, id_Delete);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "J" }, id_JoinLines);
 
     // Motions
 
     // Line Motions
-    keymap_add({ &m_normalMap, &m_visualMap }, { "$" }, id_MotionLineEnd);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "0" }, id_MotionLineBegin);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "^" }, id_MotionLineFirstChar);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "$" }, id_MotionLineEnd);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "0" }, id_MotionLineBegin);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "^" }, id_MotionLineFirstChar);
 
     // Page Motinos
-    keymap_add({ &m_normalMap, &m_visualMap }, { "j", "<Down>" }, id_MotionDown);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "k", "<Up>" }, id_MotionUp);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "l", "<Right>" }, id_MotionRight);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "h", "<Left>", "<Backspace>" }, id_MotionLeft);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-f>", "<PageDown>" }, id_MotionPageForward);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-b>", "<PageUp>" }, id_MotionPageBackward);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-d>" }, id_MotionHalfPageForward);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "<C-u>" }, id_MotionHalfPageBackward);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "G" }, id_MotionGotoLine);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "j", "<Down>" }, id_MotionDown);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "k", "<Up>" }, id_MotionUp);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "l", "<Right>" }, id_MotionRight);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "h", "<Left>", "<Backspace>" }, id_MotionLeft);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "<C-f>", "<PageDown>" }, id_MotionPageForward);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "<C-b>", "<PageUp>" }, id_MotionPageBackward);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "<C-d>" }, id_MotionHalfPageForward);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "<C-u>" }, id_MotionHalfPageBackward);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "G" }, id_MotionGotoLine);
 
     // Word motions
-    keymap_add({ &m_normalMap, &m_visualMap }, { "w" }, id_MotionWord);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "b" }, id_MotionBackWord);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "W" }, id_MotionWORD);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "B" }, id_MotionBackWORD);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "e" }, id_MotionEndWord);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "E" }, id_MotionEndWORD);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "ge" }, id_MotionBackEndWord);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "gE" }, id_MotionBackEndWORD);
-    keymap_add({ &m_normalMap, &m_visualMap }, { "gg" }, id_MotionGotoBeginning);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "w" }, id_MotionWord);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "b" }, id_MotionBackWord);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "W" }, id_MotionWORD);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "B" }, id_MotionBackWORD);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "e" }, id_MotionEndWord);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "E" }, id_MotionEndWORD);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "ge" }, id_MotionBackEndWord);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "gE" }, id_MotionBackEndWORD);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "gg" }, id_MotionGotoBeginning);
 
-    keymap_add({ &m_visualMap }, { "C" }, id_ChangeLine);
+    keymap_vim({ &m_visualMap }, { "C" }, id_ChangeLine);
 
     // Not necessary?
-    keymap_add({ &m_normalMap, &m_visualMap, &m_insertMap }, { "<Escape>" }, id_NormalMode);
+    keymap_vim({ &m_normalMap, &m_visualMap, &m_insertMap }, { "<Escape>" }, id_NormalMode);
 
     // Visual mode
-    keymap_add(m_visualMap, "aW", id_VisualSelectAWORD);
-    keymap_add(m_visualMap, "aw", id_VisualSelectAWord);
-    keymap_add(m_visualMap, "iW", id_VisualSelectInnerWORD);
-    keymap_add(m_visualMap, "iw", id_VisualSelectInnerWord);
-    keymap_add(m_visualMap, "d", id_VisualDelete); 
-    keymap_add(m_visualMap, "c", id_VisualChange);
-    keymap_add(m_visualMap, "s", id_VisualSubstitute);
-
+    keymap_vim({ &m_visualMap }, { "aW" }, id_VisualSelectAWORD);
+    keymap_vim({ &m_visualMap }, {"aw" }, id_VisualSelectAWord);
+    keymap_vim({ &m_visualMap }, {"iW" }, id_VisualSelectInnerWORD);
+    keymap_vim({ &m_visualMap }, {"iw" }, id_VisualSelectInnerWord);
+    keymap_vim({ &m_visualMap }, { "d" }, id_VisualDelete);
+    keymap_vim({ &m_visualMap }, {"c" }, id_VisualChange);
+    keymap_vim({ &m_visualMap }, {"s" }, id_VisualSubstitute);
 
     // Normal mode only
-    keymap_add(m_normalMap, "i", id_InsertMode);
-    keymap_add(m_normalMap, "H", id_PreviousTabWindow);
-    keymap_add(m_normalMap, "L", id_NextTabWindow);
-    keymap_add(m_normalMap, "o", id_OpenLineBelow);
-    keymap_add(m_normalMap, "O", id_OpenLineAbove);
-    keymap_add(m_normalMap, "V", id_VisualLineMode);
-    keymap_add(m_normalMap, "v", id_VisualMode);
+    keymap_vim({ &m_normalMap }, {"i" }, id_InsertMode);
+    keymap_vim({ &m_normalMap }, {"H" }, id_PreviousTabWindow);
+    keymap_vim({ &m_normalMap }, {"L" }, id_NextTabWindow);
+    keymap_vim({ &m_normalMap }, {"o" }, id_OpenLineBelow);
+    keymap_vim({ &m_normalMap }, {"O" }, id_OpenLineAbove);
+    keymap_vim({ &m_normalMap }, {"V" }, id_VisualLineMode);
+    keymap_vim({ &m_normalMap }, {"v" }, id_VisualMode);
 
-    keymap_add(m_normalMap, "dw", id_DeleteWord);
-    keymap_add(m_normalMap, "dW", id_DeleteWORD);
-    keymap_add(m_normalMap, "daw", id_DeleteAWord);
-    keymap_add(m_normalMap, "daW", id_DeleteAWORD);
-    keymap_add(m_normalMap, "diw", id_DeleteInnerWord);
-    keymap_add(m_normalMap, "diW", id_DeleteInnerWORD);
-    keymap_add({ &m_normalMap }, { "D", "d$" }, id_DeleteToLineEnd);
-    keymap_add({ &m_normalMap }, { "dd" }, id_DeleteLine);
+    keymap_vim({ &m_normalMap }, { "dw" }, id_DeleteWord);
+    keymap_vim({ &m_normalMap }, {"dW" }, id_DeleteWORD);
+    keymap_vim({ &m_normalMap }, { "daw" }, id_DeleteAWord);
+    keymap_vim({ &m_normalMap }, { "daW" }, id_DeleteAWORD);
+    keymap_vim({ &m_normalMap }, { "diw" }, id_DeleteInnerWord);
+    keymap_vim({ &m_normalMap }, { "diW" }, id_DeleteInnerWORD);
+    keymap_vim({ &m_normalMap }, { "D", "d$" }, id_DeleteToLineEnd);
+    keymap_vim({ &m_normalMap }, { "dd" }, id_DeleteLine);
 
-    keymap_add(m_normalMap, "cw", id_ChangeWord);
-    keymap_add(m_normalMap, "cW", id_ChangeWORD);
-    keymap_add(m_normalMap, "ciw", id_ChangeInnerWord);
-    keymap_add(m_normalMap, "ciW", id_ChangeInnerWORD);
-    keymap_add(m_normalMap, "caw", id_ChangeAWord);
-    keymap_add(m_normalMap, "caW", id_ChangeAWORD);
-    keymap_add({ &m_normalMap }, { "C","c$" }, id_ChangeToLineEnd);
-    keymap_add({ &m_normalMap }, { "cc" }, id_ChangeLine);
+    keymap_vim({ &m_normalMap }, { "cw" }, id_ChangeWord);
+    keymap_vim({ &m_normalMap }, { "cW" }, id_ChangeWORD);
+    keymap_vim({ &m_normalMap }, { "ciw" }, id_ChangeInnerWord);
+    keymap_vim({ &m_normalMap }, { "ciW" }, id_ChangeInnerWORD);
+    keymap_vim({ &m_normalMap }, { "caw" }, id_ChangeAWord);
+    keymap_vim({ &m_normalMap }, { "caW" }, id_ChangeAWORD);
+    keymap_vim({ &m_normalMap }, { "C", "c$" }, id_ChangeToLineEnd);
+    keymap_vim({ &m_normalMap }, { "cc" }, id_ChangeLine);
 
-    keymap_add(m_normalMap, "S", id_SubstituteLine);
-    keymap_add(m_normalMap, "s", id_Substitute);
-    keymap_add(m_normalMap, "A", id_AppendToLine);
-    keymap_add(m_normalMap, "a", id_Append);
-    keymap_add(m_normalMap, "I", id_InsertAtFirstChar);
-    keymap_add(m_normalMap, ";", id_FindNext);
+    keymap_vim({ &m_normalMap }, { "S" }, id_SubstituteLine);
+    keymap_vim({ &m_normalMap }, {"s" }, id_Substitute);
+    keymap_vim({ &m_normalMap }, {"A" }, id_AppendToLine);
+    keymap_vim({ &m_normalMap }, {"a" }, id_Append);
+    keymap_vim({ &m_normalMap }, {"I" }, id_InsertAtFirstChar);
+    keymap_vim({ &m_normalMap }, {";" }, id_FindNext);
 
+    keymap_vim({ &m_normalMap }, { "n" }, id_MotionNextMarker);
+    keymap_vim({ &m_normalMap }, { "N" }, id_MotionPreviousMarker);
+    keymap_vim({ &m_normalMap }, { "<F8>" }, id_MotionNextMarker);
+    keymap_vim({ &m_normalMap }, { "<S-F8>" }, id_MotionPreviousMarker);
 
-    keymap_add(m_normalMap, "n", id_MotionNextMarker);
-    keymap_add(m_normalMap, "N", id_MotionPreviousMarker);
-    keymap_add(m_normalMap, "<F8>", id_MotionNextMarker);
-    keymap_add(m_normalMap, "<S-F8>", id_MotionPreviousMarker);
+    keymap_vim({ &m_normalMap }, { "+" }, id_FontBigger);
+    keymap_vim({ &m_normalMap }, { "-" }, id_FontSmaller);
 
-    keymap_add(m_normalMap, "+", id_FontBigger);
-    keymap_add(m_normalMap, "-", id_FontSmaller);
+    keymap_vim({ &m_normalMap }, { "<C-i><C-o>" }, id_SwitchToAlternateFile);
 
-    keymap_add(m_normalMap, "<C-i><C-o>", id_SwitchToAlternateFile);
+    keymap_vim({ &m_normalMap }, { "<C-j>" }, id_MotionDownSplit);
+    keymap_vim({ &m_normalMap }, {"<C-l>" }, id_MotionRightSplit);
+    keymap_vim({ &m_normalMap }, {"<C-k>" }, id_MotionUpSplit);
+    keymap_vim({ &m_normalMap }, {"<C-h>" }, id_MotionLeftSplit);
+    keymap_vim({ &m_normalMap }, { "<Return>" }, id_MotionNextFirstChar);
 
-    keymap_add(m_normalMap, "<C-j>", id_MotionDownSplit);
-    keymap_add(m_normalMap, "<C-l>", id_MotionRightSplit);
-    keymap_add(m_normalMap, "<C-k>", id_MotionUpSplit);
-    keymap_add(m_normalMap, "<C-h>", id_MotionLeftSplit);
-    keymap_add(m_normalMap, "<Return>", id_MotionNextFirstChar);
-    
-    keymap_add({ &m_normalMap }, { "<C-p>", "<C-,>" }, id_QuickSearch);
-    keymap_add({ &m_normalMap }, { "<C-r>" }, id_Redo);
-    keymap_add({ &m_normalMap }, { "<C-z>", "u" }, id_Undo);
+    keymap_vim({ &m_normalMap }, { "<C-p>", "<C-,>" }, id_QuickSearch);
+    keymap_vim({ &m_normalMap }, { "<C-r>" }, id_Redo);
+    keymap_vim({ &m_normalMap }, { "<C-z>", "u" }, id_Undo);
 
-    keymap_add({ &m_normalMap, &m_visualMap }, { "f<.>" }, id_Find);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "f<.>" }, id_Find);
 
-    keymap_add({ &m_normalMap, &m_visualMap }, { ":", "/", "?" }, id_ExMode);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { ":", "/", "?" }, id_ExMode);
 
     /* Standard mode
-    keymap_add({ &m_normalMap }, { "<C-y>"}, id_Redo);
+    keymap_vim({ &m_normalMap }, { "<C-y>"}, id_Redo);
     */
 
     // Insert Mode
-    keymap_add({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
-    keymap_add({ &m_insertMap }, { "<Return>" }, id_InsertCarriageReturn);
-    keymap_add({ &m_insertMap }, { "<Tab>" }, id_InsertTab);
-    keymap_add({ &m_insertMap }, { "jk" }, id_NormalMode);
+    keymap_vim({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
+    keymap_vim({ &m_insertMap }, { "<Return>" }, id_InsertCarriageReturn);
+    keymap_vim({ &m_insertMap }, { "<Tab>" }, id_InsertTab);
+    keymap_vim({ &m_insertMap }, { "jk" }, id_NormalMode);
 
-    keymap_dump(m_normalMap);
+    std::regex countGroup(R"((\d+)(?:$|\w)+)");
+    std::regex registerGroup(R"((?:^\d*)(\"\w+))");
+    std::regex unfinishedGroup(R"(^\d*\"*$)");
+    
+    m_normalMap.m_countGroups.push_back(countGroup);
+    m_normalMap.m_registerGroups.push_back(registerGroup);
+    m_normalMap.m_unfinishedGroups.push_back(unfinishedGroup);
+
+    /*keymap_dump(m_normalMap);
     keymap_dump(m_visualMap);
     keymap_dump(m_insertMap);
+    */
 }
 
 void ZepMode_Vim::Begin()

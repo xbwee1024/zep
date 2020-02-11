@@ -41,4 +41,9 @@ private:
     timer m_insertEscapeTimer;
 };
 
+inline std::string MakeCommandRegex(const std::string& command)
+{
+    return std::string(R"((?:(\d)|(<\S>*)|("\w?)*)()") + command + ")";
+}
+
 } // namespace Zep

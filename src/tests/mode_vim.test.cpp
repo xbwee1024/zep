@@ -6,12 +6,14 @@
 #include "zep/mode_vim.h"
 #include "zep/tab_window.h"
 #include "zep/window.h"
+#include "zep/mcommon/logger.h"
 
 #include <gtest/gtest.h>
+#include <regex>
 
 // TESTS
 // TODO:
-// - A check that navigation up/down on wrapped lines is correct.  Needs to setup a window with a long buffer 
+// - A check that navigation up/down on wrapped lines is correct.  Needs to setup a window with a long buffer
 // line that wraps, and that navigation moves correctly
 
 using namespace Zep;
@@ -160,7 +162,7 @@ TEST_F(VimTest, BACKSPACE)
     spMode->AddCommandText("lli");
     spMode->AddKeyPress(ExtKeys::BACKSPACE);
     ASSERT_STREQ(pBuffer->GetText().string().c_str(), "Hllo");
-   
+
     // Check that appending on the line then hitting backspace removes the last char
     // A bug that showed up at some point
     pBuffer->SetText("AB");
@@ -430,4 +432,18 @@ CURSOR_TEST(find_a_char_repeat, "one one one", "fo;", 8, 0);
 CURSOR_TEST(find_a_char_num, "one2 one2", "2f2", 8, 0);
 CURSOR_TEST(find_a_char_beside, "ooo", "fo;", 2, 0);
 
+TEST(Regex, VimRegex)
+{
+    auto rx = MakeCommandRegex("y");
+    std::regex re(rx);
 
+    std::smatch match;
+    std::string testString("3y");
+    if (std::regex_match(testString, match, re))
+    {
+        for (auto& m : match)
+        {
+            LOG(DEBUG) << "Match: " << m.str();
+        }
+    }
+}
