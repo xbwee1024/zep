@@ -89,42 +89,36 @@ void CommandContext::UpdateRegisters()
 
 void CommandContext::GetCommandRegisters()
 {
-    // TODO: Move this to the key mapper
-    // Store the register source
-    if (keymap.commandWithoutGroups[0] == '"' && keymap.commandWithoutGroups.size() > 2)
+    if (keymap.registerName == 0)
+        return;
+
+    if (keymap.registerName == '_')
     {
-        // Null register
-        if (keymap.commandWithoutGroups[1] == '_')
-        {
-            std::stack<char> temp;
-            registers.swap(temp);
-        }
-        else
-        {
-            registers.push(keymap.commandWithoutGroups[1]);
-            char reg = keymap.commandWithoutGroups[1];
-
-            // Demote capitals to lower registers when pasting (all both)
-            if (reg >= 'A' && reg <= 'Z')
-            {
-                reg = (char)std::tolower((char)reg);
-            }
-
-            if (owner.GetEditor().GetRegisters().find(std::string({ reg })) != owner.GetEditor().GetRegisters().end())
-            {
-                pRegister = &owner.GetEditor().GetRegister(reg);
-            }
-        }
-        keymap.commandWithoutGroups = keymap.commandWithoutGroups.substr(2);
+        std::stack<char> temp;
+        registers.swap(temp);
     }
     else
     {
-        // Default register
-        if (pRegister->text.empty())
+        registers.push(keymap.registerName);
+
+        char reg = keymap.registerName;
+
+        // Demote capitals to lower registers when pasting (all both)
+        if (reg >= 'A' && reg <= 'Z')
         {
-            pRegister = &owner.GetEditor().GetRegister('"');
+            reg = (char)std::tolower((char)reg);
         }
-        keymap.commandWithoutGroups = keymap.commandWithoutGroups;
+
+        if (owner.GetEditor().GetRegisters().find(std::string({ reg })) != owner.GetEditor().GetRegisters().end())
+        {
+            pRegister = &owner.GetEditor().GetRegister(reg);
+        }
+    }
+
+    // Default register
+    if (pRegister->text.empty())
+    {
+        pRegister = &owner.GetEditor().GetRegister('"');
     }
 }
 
@@ -243,7 +237,7 @@ void ZepMode::SwitchMode(EditorMode currentMode)
         m_exCommandStartLocation = cursor;
         pWindow->SetCursorType(CursorType::Hidden);
         m_pendingEscape = false;
-        // Ensure we show the command at the bottom 
+        // Ensure we show the command at the bottom
         GetEditor().SetCommandText(m_currentCommand);
     }
     break;
@@ -284,7 +278,7 @@ std::string ZepMode::ConvertInputToMapString(uint32_t key, uint32_t modifierKeys
     std::string mapped;
 
 #define COMPARE_STR(a, b) \
-    if (key == b) \
+    if (key == b)         \
         mapped = #a;
 
     COMPARE_STR(Return, ExtKeys::RETURN)
@@ -324,7 +318,6 @@ std::string ZepMode::ConvertInputToMapString(uint32_t key, uint32_t modifierKeys
         {
             str << mapped;
         }
-
     }
     else
     {
@@ -501,7 +494,7 @@ void ZepMode::HandleMappedInput(const std::string& input)
         // In this way, arriving at a tree leaf without a command would easily tell us that we had failed to match a command
         if (!spContext->keymap.needMoreChars)
         {
-            if (m_currentMode != EditorMode::Ex && spContext->keymap.commandWithoutGroups[0] != '"')
+            if (m_currentMode != EditorMode::Ex)
             {
                 ResetCommand();
             }
@@ -1611,7 +1604,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         context.op = CommandOperation::Insert;
         context.commandResult.modeSwitch = EditorMode::Insert;
         context.commandResult.flags |= CommandResultFlags::HandledCount;
-       
+
         if (context.fullCommand == " ")
         {
             ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroupInserts);
@@ -1784,8 +1777,7 @@ bool ZepMode::HandleExCommand(std::string strCommand)
     if (strCommand.empty())
         return false;
 
-    auto eraseExtKey = [](std::string& str)
-    {
+    auto eraseExtKey = [](std::string& str) {
         auto pos = str.find_last_of('<');
         if (pos != std::string::npos)
         {
@@ -2188,7 +2180,7 @@ bool ZepMode::HandleExCommand(std::string strCommand)
     }
     return false;
 }
-    
+
 const KeyMap& ZepMode::GetKeyMappings(EditorMode mode) const
 {
     if (mode == EditorMode::Visual)

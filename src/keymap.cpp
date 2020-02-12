@@ -263,6 +263,8 @@ void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult&
     FindRegisters(input, map, result);
     IgnoreUnfinished(input, map);
 
+    result.commandWithoutGroups = input;
+
     // TODO: Zero input
     // Did the regex eat the groups?  If so, we haven't got to the command yet
     if (input.empty())

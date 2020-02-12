@@ -169,7 +169,7 @@ struct KeyMap
 struct KeyMapResult
 {
     std::vector<int> countGroups;
-    char registerName;
+    char registerName = 0;
     std::string commandWithoutGroups;
     bool needMoreChars = false;
     int totalCount = 1;
