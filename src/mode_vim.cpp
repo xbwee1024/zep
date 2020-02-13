@@ -88,10 +88,7 @@ void ZepMode_Vim::Init()
     // Setup keymaps
     // Later, we will be able to read these from a file.
     // But keymaps are useful for overriding behavior in modes too
-
-    //(?:(\d*)|(<\S>*)|("\w)?)*(\S)
-    auto keymap_vim = [](const std::vector<KeyMap*>& maps, const std::vector<std::string>& commands, const StringId& id)
-    {
+    auto keymap_vim = [](const std::vector<KeyMap*>& maps, const std::vector<std::string>& commands, const StringId& id) {
         keymap_add(maps, commands, id);
     };
 
@@ -141,30 +138,31 @@ void ZepMode_Vim::Init()
 
     // Visual mode
     keymap_vim({ &m_visualMap }, { "aW" }, id_VisualSelectAWORD);
-    keymap_vim({ &m_visualMap }, {"aw" }, id_VisualSelectAWord);
-    keymap_vim({ &m_visualMap }, {"iW" }, id_VisualSelectInnerWORD);
-    keymap_vim({ &m_visualMap }, {"iw" }, id_VisualSelectInnerWord);
+    keymap_vim({ &m_visualMap }, { "aw" }, id_VisualSelectAWord);
+    keymap_vim({ &m_visualMap }, { "iW" }, id_VisualSelectInnerWORD);
+    keymap_vim({ &m_visualMap }, { "iw" }, id_VisualSelectInnerWord);
     keymap_vim({ &m_visualMap }, { "d" }, id_VisualDelete);
-    keymap_vim({ &m_visualMap }, {"c" }, id_VisualChange);
-    keymap_vim({ &m_visualMap }, {"s" }, id_VisualSubstitute);
+    keymap_vim({ &m_visualMap }, { "c" }, id_VisualChange);
+    keymap_vim({ &m_visualMap }, { "s" }, id_VisualSubstitute);
 
     // Normal mode only
-    keymap_vim({ &m_normalMap }, {"i" }, id_InsertMode);
-    keymap_vim({ &m_normalMap }, {"H" }, id_PreviousTabWindow);
-    keymap_vim({ &m_normalMap }, {"L" }, id_NextTabWindow);
-    keymap_vim({ &m_normalMap }, {"o" }, id_OpenLineBelow);
-    keymap_vim({ &m_normalMap }, {"O" }, id_OpenLineAbove);
-    keymap_vim({ &m_normalMap }, {"V" }, id_VisualLineMode);
-    keymap_vim({ &m_normalMap }, {"v" }, id_VisualMode);
+    keymap_vim({ &m_normalMap }, { "i" }, id_InsertMode);
+    keymap_vim({ &m_normalMap }, { "H" }, id_PreviousTabWindow);
+    keymap_vim({ &m_normalMap }, { "L" }, id_NextTabWindow);
+    keymap_vim({ &m_normalMap }, { "o" }, id_OpenLineBelow);
+    keymap_vim({ &m_normalMap }, { "O" }, id_OpenLineAbove);
+    keymap_vim({ &m_normalMap }, { "V" }, id_VisualLineMode);
+    keymap_vim({ &m_normalMap }, { "v" }, id_VisualMode);
 
     keymap_vim({ &m_normalMap }, { "dw" }, id_DeleteWord);
-    keymap_vim({ &m_normalMap }, {"dW" }, id_DeleteWORD);
+    keymap_vim({ &m_normalMap }, { "dW" }, id_DeleteWORD);
     keymap_vim({ &m_normalMap }, { "daw" }, id_DeleteAWord);
     keymap_vim({ &m_normalMap }, { "daW" }, id_DeleteAWORD);
     keymap_vim({ &m_normalMap }, { "diw" }, id_DeleteInnerWord);
     keymap_vim({ &m_normalMap }, { "diW" }, id_DeleteInnerWORD);
     keymap_vim({ &m_normalMap }, { "D", "d$" }, id_DeleteToLineEnd);
     keymap_vim({ &m_normalMap }, { "dd" }, id_DeleteLine);
+    keymap_vim({ &m_normalMap }, { "dt<.>" }, id_DeleteToChar);
 
     keymap_vim({ &m_normalMap }, { "cw" }, id_ChangeWord);
     keymap_vim({ &m_normalMap }, { "cW" }, id_ChangeWORD);
@@ -174,13 +172,17 @@ void ZepMode_Vim::Init()
     keymap_vim({ &m_normalMap }, { "caW" }, id_ChangeAWORD);
     keymap_vim({ &m_normalMap }, { "C", "c$" }, id_ChangeToLineEnd);
     keymap_vim({ &m_normalMap }, { "cc" }, id_ChangeLine);
+    
+    keymap_vim({ &m_normalMap }, { "ct<.>" }, id_ChangeToChar);
+
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "r<.>" }, id_Replace);
 
     keymap_vim({ &m_normalMap }, { "S" }, id_SubstituteLine);
-    keymap_vim({ &m_normalMap }, {"s" }, id_Substitute);
-    keymap_vim({ &m_normalMap }, {"A" }, id_AppendToLine);
-    keymap_vim({ &m_normalMap }, {"a" }, id_Append);
-    keymap_vim({ &m_normalMap }, {"I" }, id_InsertAtFirstChar);
-    keymap_vim({ &m_normalMap }, {";" }, id_FindNext);
+    keymap_vim({ &m_normalMap }, { "s" }, id_Substitute);
+    keymap_vim({ &m_normalMap }, { "A" }, id_AppendToLine);
+    keymap_vim({ &m_normalMap }, { "a" }, id_Append);
+    keymap_vim({ &m_normalMap }, { "I" }, id_InsertAtFirstChar);
+    keymap_vim({ &m_normalMap }, { ";" }, id_FindNext);
 
     keymap_vim({ &m_normalMap }, { "n" }, id_MotionNextMarker);
     keymap_vim({ &m_normalMap }, { "N" }, id_MotionPreviousMarker);
@@ -193,9 +195,9 @@ void ZepMode_Vim::Init()
     keymap_vim({ &m_normalMap }, { "<C-i><C-o>" }, id_SwitchToAlternateFile);
 
     keymap_vim({ &m_normalMap }, { "<C-j>" }, id_MotionDownSplit);
-    keymap_vim({ &m_normalMap }, {"<C-l>" }, id_MotionRightSplit);
-    keymap_vim({ &m_normalMap }, {"<C-k>" }, id_MotionUpSplit);
-    keymap_vim({ &m_normalMap }, {"<C-h>" }, id_MotionLeftSplit);
+    keymap_vim({ &m_normalMap }, { "<C-l>" }, id_MotionRightSplit);
+    keymap_vim({ &m_normalMap }, { "<C-k>" }, id_MotionUpSplit);
+    keymap_vim({ &m_normalMap }, { "<C-h>" }, id_MotionLeftSplit);
     keymap_vim({ &m_normalMap }, { "<Return>" }, id_MotionNextFirstChar);
 
     keymap_vim({ &m_normalMap }, { "<C-p>", "<C-,>" }, id_QuickSearch);
@@ -203,12 +205,9 @@ void ZepMode_Vim::Init()
     keymap_vim({ &m_normalMap }, { "<C-z>", "u" }, id_Undo);
 
     keymap_vim({ &m_normalMap, &m_visualMap }, { "f<.>" }, id_Find);
+    keymap_vim({ &m_normalMap, &m_visualMap }, { "F<.>" }, id_FindBackwards);
 
     keymap_vim({ &m_normalMap, &m_visualMap }, { ":", "/", "?" }, id_ExMode);
-
-    /* Standard mode
-    keymap_vim({ &m_normalMap }, { "<C-y>"}, id_Redo);
-    */
 
     // Insert Mode
     keymap_vim({ &m_insertMap }, { "<Backspace>" }, id_Backspace);
@@ -216,18 +215,27 @@ void ZepMode_Vim::Init()
     keymap_vim({ &m_insertMap }, { "<Tab>" }, id_InsertTab);
     keymap_vim({ &m_insertMap }, { "jk" }, id_NormalMode);
 
-    std::regex countGroup(R"((\d+)(?:$|\w)+)");
-    std::regex registerGroup(R"((?:^\d*)("\w))");
-    std::regex unfinishedGroup(R"(^\d*"*$)");
-    
+    // These searches are for substrings...
+    // Counts are any digit sequences in the command
+    // Match any digit; but not as the very last character
+    std::regex countGroup(R"((\d+)\D+)"); 
+
+    // Match any register; currently ascii or _ 
+    std::regex registerGroup(R"(("\w))");
+   
+    // Potentially unfinished text.
+    // Any number of digits at the beginning of the line, and possibly 1 "
+    std::regex unfinishedGroup1(R"(^\d*"?$)");
+
     m_normalMap.m_countGroups.push_back(countGroup);
     m_normalMap.m_registerGroups.push_back(registerGroup);
-    m_normalMap.m_unfinishedGroups.push_back(unfinishedGroup);
+    m_normalMap.m_unfinishedGroups.push_back(unfinishedGroup1);
+    m_normalMap.ignoreFinalDigit = true;
 
-    /*keymap_dump(m_normalMap);
-    keymap_dump(m_visualMap);
-    keymap_dump(m_insertMap);
-    */
+    m_visualMap.m_countGroups.push_back(countGroup);
+    m_visualMap.m_registerGroups.push_back(registerGroup);
+    m_visualMap.m_unfinishedGroups.push_back(unfinishedGroup1);
+    m_visualMap.ignoreFinalDigit = true;
 }
 
 void ZepMode_Vim::Begin()

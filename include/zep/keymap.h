@@ -22,6 +22,7 @@ DECLARE_COMMANDID(InsertMode)
 DECLARE_COMMANDID(ExMode)
 
 DECLARE_COMMANDID(Find)
+DECLARE_COMMANDID(FindBackwards)
 
 DECLARE_COMMANDID(VisualSelectInnerWORD)
 DECLARE_COMMANDID(VisualSubstitute)
@@ -54,6 +55,8 @@ DECLARE_COMMANDID(DeleteAWord)
 DECLARE_COMMANDID(DeleteAWORD)
 DECLARE_COMMANDID(DeleteInnerWord)
 DECLARE_COMMANDID(DeleteInnerWORD)
+DECLARE_COMMANDID(DeleteToChar)
+
 DECLARE_COMMANDID(SubstituteLine)
 DECLARE_COMMANDID(Substitute)
 
@@ -65,6 +68,9 @@ DECLARE_COMMANDID(ChangeAWord)
 DECLARE_COMMANDID(ChangeAWORD)
 DECLARE_COMMANDID(ChangeInnerWord)
 DECLARE_COMMANDID(ChangeInnerWORD)
+DECLARE_COMMANDID(ChangeToChar)
+
+DECLARE_COMMANDID(Replace)
 
 DECLARE_COMMANDID(PasteAfter)
 DECLARE_COMMANDID(PasteBefore)
@@ -163,12 +169,14 @@ struct KeyMap
     std::vector<std::regex> m_countGroups;
     std::vector<std::regex> m_registerGroups;
     std::vector<std::regex> m_unfinishedGroups;
+    bool ignoreFinalDigit = false;
     std::shared_ptr<CommandNode> spRoot = std::make_shared<CommandNode>();
 };
 
 struct KeyMapResult
 {
     std::vector<int> countGroups;
+    std::vector<char> captureChars;
     char registerName = 0;
     std::string commandWithoutGroups;
     bool needMoreChars = false;
@@ -180,6 +188,6 @@ struct KeyMapResult
 bool keymap_add(const std::vector<KeyMap*>& maps, const std::vector<std::string>& strCommand, const StringId& commandId);
 bool keymap_add(KeyMap& map, const std::string& strCommand, const StringId& commandId);
 void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult& result);
-void keymap_dump(const KeyMap& map);
+void keymap_dump(const KeyMap& map, std::ostringstream& str);
 
 } // namespace Zep

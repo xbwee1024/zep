@@ -89,8 +89,11 @@ void CommandContext::UpdateRegisters()
 
 void CommandContext::GetCommandRegisters()
 {
+    // No specified register, so use the default
     if (keymap.registerName == 0)
-        return;
+    {
+        keymap.registerName = '"';
+    }
 
     if (keymap.registerName == '_')
     {
@@ -340,6 +343,9 @@ void ZepMode::AddKeyPress(uint32_t key, uint32_t modifierKeys)
         return;
     }
 
+    // For now, slice off the UTF8 ;)
+    key = key & 0xFF;
+
     m_lastKey = key;
 
     // Get the new command by parsing out the keys
@@ -461,14 +467,6 @@ void ZepMode::HandleMappedInput(const std::string& input)
             }
         }
 
-        // Back from insert will mean we end the undo group
-        /*
-        if (enteringMode(EditorMode::Normal))
-        {
-            AddCommand(std::make_shared<ZepCommand_EndGroup>(spContext->buffer));
-        }
-        */
-
         // A mode to switch to after the command is done
         SwitchMode(spContext->commandResult.modeSwitch);
 
@@ -485,13 +483,6 @@ void ZepMode::HandleMappedInput(const std::string& input)
     else
     {
         // If not found, and there was no request for more characters, and we aren't in Ex mode
-        // Reset the current command
-        // TODO: Clean up these 'is command finished or not' complications.
-        // Perhaps by having a regex for every command: <?count>d<?count>d.  Otherwise there is no easy way to ensure
-        // a command is not 'finished'.  The user can always escape/return of course, but it's neater if invalid
-        // commands are ignored, as we mostly do.  To add a regex, the keymapper would have to build a tree and 'capture'
-        // relevent information, for example for 'f<?graph>' you would capture the char to find
-        // In this way, arriving at a tree leaf without a command would easily tell us that we had failed to match a command
         if (!spContext->keymap.needMoreChars)
         {
             if (m_currentMode != EditorMode::Ex)
@@ -625,14 +616,7 @@ bool ZepMode::GetCommand(CommandContext& context)
         return false;
     }
 
-    // Didn't find an immediate match, found a count and there is no other part to the command
-    // TODO Remove this when the keymapper is finished - it should be part of it
-    if (context.currentMode == EditorMode::Normal && context.keymap.foundMapping == 0 && !context.keymap.countGroups.empty())
-    {
-        context.keymap.needMoreChars = true;
-    }
-
-    // Found a valid command, but there are more options to come
+    // The keymapper is waiting for more input
     if (context.keymap.needMoreChars)
     {
         return false;
@@ -1477,9 +1461,27 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
     else if (mappedCommand == id_Find)
     {
-        GetCurrentWindow()->SetBufferCursor(context.buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.keymap.commandWithoutGroups[1], SearchDirection::Forward));
-        m_lastFind = context.keymap.commandWithoutGroups[1];
-        m_lastFindDirection = SearchDirection::Forward;
+        if (!context.keymap.captureChars.empty())
+        {
+            GetCurrentWindow()->SetBufferCursor(context.buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.keymap.captureChars[0], SearchDirection::Forward));
+            m_lastFind = context.keymap.captureChars[0];
+            m_lastFindDirection = SearchDirection::Forward;
+        }
+        return true;
+    }
+    else if (mappedCommand == id_FindBackwards)
+    {
+        if (!context.keymap.captureChars.empty())
+        {
+            GetCurrentWindow()->SetBufferCursor(context.buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.keymap.captureChars[0], SearchDirection::Backward));
+            m_lastFind = context.keymap.captureChars[0];
+            m_lastFindDirection = SearchDirection::Backward;
+        }
+        return true;
+    }
+    else if (mappedCommand == id_FindNext)
+    {
+        GetCurrentWindow()->SetBufferCursor(context.buffer.FindOnLineMotion(bufferCursor, (const utf8*)m_lastFind.c_str(), m_lastFindDirection));
         return true;
     }
     else if (mappedCommand == id_Append)
@@ -1491,7 +1493,7 @@ bool ZepMode::GetCommand(CommandContext& context)
     }
     else if (mappedCommand == id_AppendToLine)
     {
-        GetCurrentWindow()->SetBufferCursor(context.buffer.FindOnLineMotion(bufferCursor, (const utf8*)m_lastFind.c_str(), m_lastFindDirection));
+        GetCurrentWindow()->SetBufferCursor(context.buffer.GetLinePos(bufferCursor, LineLocation::LineLastGraphChar) + 1);
         context.commandResult.modeSwitch = EditorMode::Insert;
         return true;
     }
@@ -1507,52 +1509,9 @@ bool ZepMode::GetCommand(CommandContext& context)
         GetCurrentWindow()->SetBufferCursor(context.buffer.GetLinePos(GetCurrentWindow()->GetBufferCursor(), LineLocation::LineBegin));
         return true;
     }
-
-    /*
-    else if (context.command[0] == 'c')
+    else if (mappedCommand == id_Replace)
     {
-        if (context.command.find("ct") == 0)
-        {
-            if (context.command.length() == 3)
-            {
-                context.beginRange = bufferCursor;
-                context.endRange = buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.command[2], SearchDirection::Forward);
-                context.op = CommandOperation::Delete;
-            }
-            else
-            {
-                context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
-            }
-        }
-
-        if (context.op != CommandOperation::None)
-        {
-            context.commandResult.modeSwitch = EditorMode::Insert;
-        }
-    }
-    else if (context.command[0] == 'd' || context.command == "D")
-    {
-        if (context.command.find("dt") == 0)
-        {
-            if (context.command.length() == 3)
-            {
-                context.beginRange = bufferCursor;
-                context.endRange = buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.command[2], SearchDirection::Forward);
-                context.op = CommandOperation::Delete;
-            }
-            else
-            {
-                context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
-            }
-        }
-    }
-    else if (context.command[0] == 'r')
-    {
-        if (context.command.size() == 1)
-        {
-            context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
-        }
-        else
+        if (!context.keymap.captureChars.empty())
         {
             context.commandResult.flags |= CommandResultFlags::HandledCount;
 
@@ -1564,7 +1523,7 @@ bool ZepMode::GetCommand(CommandContext& context)
 
             context.replaceRangeMode = ReplaceRangeMode::Fill;
             context.op = CommandOperation::Replace;
-            context.tempReg.text = context.command[1];
+            context.tempReg.text = context.keymap.captureChars[0];
             context.pRegister = &context.tempReg;
 
             // Get the range from visual, or use the cursor location
@@ -1573,41 +1532,51 @@ bool ZepMode::GetCommand(CommandContext& context)
                 context.beginRange = bufferCursor;
                 context.endRange = buffer.LocationFromOffsetByChars(bufferCursor, context.keymap.totalCount);
             }
+
             context.commandResult.modeSwitch = EditorMode::Normal;
         }
     }
-    else if (context.command[0] == 'f')
+    else if (mappedCommand == id_ChangeToChar)
     {
-    }
-    else if (context.command[0] == 'F')
-    {
-        if (context.command.length() > 1)
+        if (!context.keymap.captureChars.empty())
         {
-            GetCurrentWindow()->SetBufferCursor(context.buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.command[1], SearchDirection::Backward));
-            m_lastFind = context.command[1];
-            m_lastFindDirection = SearchDirection::Backward;
-            return true;
+            context.beginRange = bufferCursor;
+            context.endRange = buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.keymap.captureChars[0], SearchDirection::Forward);
+            context.op = CommandOperation::Delete;
+            context.commandResult.modeSwitch = EditorMode::Insert;
         }
-        context.commandResult.flags |= CommandResultFlags::NeedMoreChars;
     }
-    else
+    else if (mappedCommand == id_DeleteToChar)
     {
-        return false;
+        if (!context.keymap.captureChars.empty())
+        {
+            context.beginRange = bufferCursor;
+            context.endRange = buffer.FindOnLineMotion(bufferCursor, (const utf8*)&context.keymap.captureChars[0], SearchDirection::Forward);
+            context.op = CommandOperation::Delete;
+        }
     }
-    // End of mapped command replace block
-}*/
     else if (m_currentMode == EditorMode::Insert)
     {
-        context.beginRange = context.bufferCursor;
-        context.tempReg.text = context.fullCommand;
-        context.pRegister = &context.tempReg;
-        context.op = CommandOperation::Insert;
-        context.commandResult.modeSwitch = EditorMode::Insert;
-        context.commandResult.flags |= CommandResultFlags::HandledCount;
-
-        if (context.fullCommand == " ")
+        // If not a single char, then we are trying to input a special, which isn't allowed
+        // TOOD: Cleaner detection of this?
+        if (context.keymap.commandWithoutGroups.size() == 1)
         {
-            ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroupInserts);
+            context.beginRange = context.bufferCursor;
+            context.tempReg.text = context.keymap.commandWithoutGroups;
+            context.pRegister = &context.tempReg;
+            context.op = CommandOperation::Insert;
+            context.commandResult.modeSwitch = EditorMode::Insert;
+            context.commandResult.flags |= CommandResultFlags::HandledCount;
+
+            // Insert grouping command if necessary
+            if (context.fullCommand == " ")
+            {
+                ZSetFlag(context.commandResult.flags, CommandResultFlags::BeginUndoGroup, shouldGroupInserts);
+            }
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -1839,6 +1808,21 @@ bool ZepMode::HandleExCommand(std::string strCommand)
                     str << "\"" << reg.first << "   " << displayText << '\n';
                 }
             }
+            GetEditor().SetCommandText(str.str());
+        }
+        else if (strCommand == ":map")
+        {
+            std::ostringstream str;
+           
+            // TODO: CM: this overflows; need to page the output
+            str << "--- Mappings ---" << std::endl;
+            str << "Normal Maps:" << std::endl;
+            keymap_dump(m_normalMap, str);
+            str << "Insert Maps:" << std::endl;
+            keymap_dump(m_insertMap, str);
+            str << "Visual Maps:" << std::endl;
+            keymap_dump(m_visualMap, str);
+
             GetEditor().SetCommandText(str.str());
         }
         else if (strCommand.find(":tabedit") == 0)

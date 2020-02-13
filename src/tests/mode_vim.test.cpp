@@ -343,7 +343,10 @@ COMMAND_TEST(visual_switch_V, "one", "lVlV", "one");
 
 COMMAND_TEST(chage_to, "one two", "ctthey", "heytwo");
 
-COMMAND_TEST(chage_to_digit, "one 1wo", "ct1hey", "hey1wo");
+COMMAND_TEST(change_to_digit, "one 1wo", "ct1hey", "hey1wo");
+
+COMMAND_TEST(delete_to_char, "one 1wo", "dt1", "1wo");
+COMMAND_TEST(delete_to_digit, "one two", "dtt", "two");
 
 COMMAND_TEST(visual_inner_word, "one-three", "lviwd", "-three");
 COMMAND_TEST(visual_inner_word_undo, "one-three", "lviwdu", "one-three");
@@ -394,7 +397,6 @@ CURSOR_TEST(motion_G_goto_enddoc, "one\ntwo", "G", 0, 1);
 CURSOR_TEST(motion_3G, "one\ntwo\nthree\nfour\n", "3G", 0, 2); // Note: Goto line3, offset 2!
 CURSOR_TEST(motion_0G, "one\ntwo\nthree\nfour\n", "0G", 0, 4); // Note: 0 means go to last line
 CURSOR_TEST(motion_goto_begindoc, "one\ntwo", "lljgg", 0, 0);
-CURSOR_TEST(motion_goto_beginline, "one two", "lllll0", 0, 0);
 CURSOR_TEST(motion_goto_firstlinechar, "   one two", "^", 3, 0);
 CURSOR_TEST(motion_2w, "one two three", "2w", 8, 0);
 CURSOR_TEST(motion_w, "one! two three", "w", 3, 0);
@@ -431,6 +433,7 @@ CURSOR_TEST(find_a_char_stay_on_line, "one two\nthree", "fefe", 2, 0);
 CURSOR_TEST(find_a_char_repeat, "one one one", "fo;", 8, 0);
 CURSOR_TEST(find_a_char_num, "one2 one2", "2f2", 8, 0);
 CURSOR_TEST(find_a_char_beside, "ooo", "fo;", 2, 0);
+CURSOR_TEST(find_backwards, "foo", "lllllFf", 0, 0);
 
 TEST(Regex, VimRegex)
 {

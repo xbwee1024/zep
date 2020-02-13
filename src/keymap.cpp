@@ -55,59 +55,30 @@ std::string keymap_string(const std::string& str)
 std::string NextToken(std::string::const_iterator& itrChar, std::string::const_iterator itrEnd)
 {
     std::ostringstream str;
+
     // Find a group
     if (*itrChar == '<')
     {
-        str << "<";
-
-        bool lastShiftCtrl = true;
         itrChar++;
+        auto itrStart = itrChar;
 
         // Walk the group, ensuring we consistently output (C-)(S-)foo
         while (itrChar != itrEnd && *itrChar != '>')
         {
-            // Handle <c-s-, <C-s-, <C-, <c-, etc.
-            // Always capitalize C and S when in keymaps
-            if (lastShiftCtrl && (*itrChar == 's' || *itrChar == 'S'))
-            {
-                str << "S";
-                lastShiftCtrl = false;
-                itrChar++;
-            }
-            else if (lastShiftCtrl && (*itrChar == 'c' || *itrChar == 'C'))
-            {
-                str << "C";
-                lastShiftCtrl = false;
-                itrChar++;
-            }
-            else if (*itrChar == '-')
-            {
-                lastShiftCtrl = true;
-                str << "-";
-                itrChar++;
-            }
-            else
-            {
-                // Convert the alpha characters here
-                if (std::isalpha(*itrChar))
-                {
-                    auto itrTokenEnd = itrChar;
-                    while (itrTokenEnd != itrEnd && std::isalpha(*itrTokenEnd))
-                        itrTokenEnd++;
-
-                    str << std::string(itrChar, itrTokenEnd);
-                    itrChar = itrTokenEnd;
-                }
-                else
-                {
-                    str << *itrChar++;
-                }
-                lastShiftCtrl = false;
-            }
-        }
-        if (itrChar != itrEnd && *itrChar == '>')
             itrChar++;
-        str << ">";
+        }
+
+        // Ensure <C-S- or variants, ie. capitalize for consistency if the mapping
+        // was badly supplied
+        auto strGroup = std::string(itrStart, itrChar);
+        string_replace_in_place(strGroup, "c-", "C-");
+        string_replace_in_place(strGroup, "s-", "S-");
+
+        // Skip to the next
+        if (itrChar != itrEnd)
+            itrChar++;
+
+        str << "<" << strGroup << ">";
     }
     else
     {
@@ -166,12 +137,10 @@ bool keymap_add(KeyMap& map, const std::string& strCommand, const StringId& comm
     return true;
 }
 
-void keymap_dump(const KeyMap& map)
+void keymap_dump(const KeyMap& map, std::ostringstream& str)
 {
-#ifdef _DEBUG
     std::function<void(std::shared_ptr<CommandNode>, int)> fnDump;
     fnDump = [&](std::shared_ptr<CommandNode> node, int depth) {
-        std::ostringstream str;
         for (int i = 0; i < depth; i++)
         {
             str << " ";
@@ -179,7 +148,7 @@ void keymap_dump(const KeyMap& map)
         str << node->token;
         if (node->commandId != 0)
             str << " : " << node->commandId.ToString();
-        LOG(DEBUG) << str.str();
+        str << std::endl;
 
         for (auto& child : node->children)
         {
@@ -187,11 +156,10 @@ void keymap_dump(const KeyMap& map)
         }
     };
     fnDump(map.spRoot, 0);
-#endif
 }
 
 // Walk the count groups in the keymap and extract the counts, removing them from the input
-void FindCounts(std::string& input, const KeyMap& map, KeyMapResult& res)
+void FindCounts(std::string& input, const KeyMap& map, KeyMapResult& res, std::ostringstream& str)
 {
     // First map the groups
     for (auto& g : map.m_countGroups)
@@ -205,6 +173,7 @@ void FindCounts(std::string& input, const KeyMap& map, KeyMapResult& res)
                 {
                     res.countGroups.push_back(std::stoi(match[1].str()));
                     input.erase(match.position(1), match.length(1));
+                    str << "(count: " << res.countGroups[res.countGroups.size() - 1] << ")";
                 }
                 catch (std::exception& e)
                 {
@@ -213,10 +182,20 @@ void FindCounts(std::string& input, const KeyMap& map, KeyMapResult& res)
             }
         }
     }
+    
+    // Calculate the total count
+    if (!res.countGroups.empty())
+    {
+        res.totalCount = 1;
+        for (auto& g : res.countGroups)
+        {
+            res.totalCount *= g;
+        }
+    }
 }
 
 // Walk the count groups in the keymap and extract the counts, removing them from the input
-void FindRegisters(std::string& input, const KeyMap& map, KeyMapResult& res)
+void FindRegisters(std::string& input, const KeyMap& map, KeyMapResult& res, std::ostringstream& str)
 {
     // First map the groups
     for (auto& g : map.m_registerGroups)
@@ -230,13 +209,14 @@ void FindRegisters(std::string& input, const KeyMap& map, KeyMapResult& res)
                 {
                     res.registerName = match[1].str()[1];
                     input.erase(match.position(1), match.length(1));
+                    str << "(register: " << res.registerName << ")";
                 }
             }
         }
     }
 }
 
-// Erase unfinished strings from the input, leaving an empty string that will return 
+// Erase unfinished strings from the input, leaving an empty string that will return
 // more chars required
 void IgnoreUnfinished(std::string& input, const KeyMap& map)
 {
@@ -252,35 +232,35 @@ void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult&
 {
     auto spCurrent = map.spRoot.get();
 
-#ifdef _DEBUG
-    LOG(DEBUG) << "keymap_find: " << strCommand;
-    std::ostringstream str;
-#endif
-
     std::string input = strCommand;
 
-    FindCounts(input, map, result);
-    FindRegisters(input, map, result);
-    IgnoreUnfinished(input, map);
+    std::ostringstream str;
+    str << input << " - ";
+
+    // Special case for now...
+    if (strCommand != "0")
+    {
+        FindCounts(input, map, result, str);
+        FindRegisters(input, map, result, str);
+        IgnoreUnfinished(input, map);
+    }
 
     result.commandWithoutGroups = input;
 
-    // TODO: Zero input
     // Did the regex eat the groups?  If so, we haven't got to the command yet
     if (input.empty())
     {
+        str << " : ...";
+        LOG(DEBUG) << str.str();
         result.needMoreChars = true;
         return;
     }
 
-    // Keymap input:
-    // <Return>, <C-x>, etc.
-    // aA - combination of characters
-    // 013
-    // "A - mappings
+    // Walk the remaining input
     auto itrChar = input.begin();
     while (itrChar != input.end())
     {
+        // Grab full <> tokens
         std::string token = string_slurp_if(input, itrChar, '<', '>');
         if (token.empty())
         {
@@ -288,24 +268,55 @@ void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult&
             string_eat_char(input, itrChar);
         }
 
-        auto itrRoot = spCurrent->children.find(token);
-        if (itrRoot != spCurrent->children.end())
+        // Search..
+        auto checkToken = [&](const std::string& token) {
+            if (token.empty())
+            {
+                return false;
+            }
+
+            auto itrRoot = spCurrent->children.find(token);
+            if (itrRoot != spCurrent->children.end())
+            {
+                str << "(" << itrRoot->first << ")";
+                if (itrRoot->second->commandId != 0)
+                    str << " : " << itrRoot->second->commandId.ToString();
+
+                spCurrent = itrRoot->second.get();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        };
+
+        // Didn't find this token in the tree.
+        if (!checkToken(token))
         {
-#ifdef _DEBUG
-            str << "/" << itrRoot->first;
-            if (itrRoot->second->commandId != 0)
-                str << " (" << itrRoot->second->commandId.ToString() << ")";
-#endif
-            spCurrent = itrRoot->second.get();
-        }
-        else
-        {
-            // Not found?
-            result.needMoreChars = false;
-#ifdef _DEBUG
-            LOG(DEBUG) << str.str();
-#endif
-            return;
+            // Check for a wildcard match
+            if (!checkToken("<.>"))
+            {
+                // Not found either; no joy, unless this is a trailing number and there is more to come
+                if (map.ignoreFinalDigit && std::isdigit(input[input.size() - 1]))
+                {
+                    str << " : ...";
+                    result.needMoreChars = true;
+                }
+                else
+                {
+                    str << " : Not recognized";
+                    result.needMoreChars = false;
+                }
+                LOG(DEBUG) << str.str();
+                return;
+            }
+            else
+            {
+                // Found a match for a capture, so that's OK, keep going
+                result.captureChars.push_back(token[0]);
+                str << "(capture: " << token << ")";
+            }
         }
     }
 
@@ -314,20 +325,9 @@ void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult&
         result.needMoreChars = true;
     }
 
-    // Calculate the total count
-    if (!result.countGroups.empty())
-    {
-        result.totalCount = 1;
-        for (auto& g : result.countGroups)
-        {
-            result.totalCount *= g;
-        }
-    }
     result.foundMapping = spCurrent->commandId;
 
-#ifdef _DEBUG
     LOG(DEBUG) << str.str();
-#endif
 }
 
 } // namespace Zep
